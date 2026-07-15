@@ -10,7 +10,7 @@ config();
 const envSchema = z.object({
     PORT: z.coerce.number().default(envConstants.PORT),
     NODE_ENV: z.enum(["development", "production", "test"]).default(envConstants.NODE_ENV),
-    MONGO_URL: z.string().default(envConstants.MONGO_URL),
+    MONGO_URI: z.string().default(envConstants.MONGO_URI),
 });
 
 // parsing and validating environment variables
