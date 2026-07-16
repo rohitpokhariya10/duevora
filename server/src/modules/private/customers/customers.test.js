@@ -14,6 +14,7 @@ const { default: User } = await import("../../../shared/models/user.model.js");
 const { default: Organization } = await import("../../../shared/models/organization.model.js");
 const { default: Employee } = await import("../../../shared/models/employee.model.js");
 const { default: Permission } = await import("../../../shared/models/permission.model.js");
+const { default: Customer } = await import("../../../shared/models/customer.model.js");
 
 let mongoServer;
 let app;
@@ -39,10 +40,16 @@ beforeEach(async () => {
         await collections[key].deleteMany({});
     }
 
-    // Seed permission for creating customers
+    // Seed permissions
     await Permission.create({
         name: "Create Customers",
         code: "CUSTOMERS.CREATE",
+        module: "customers"
+    });
+
+    await Permission.create({
+        name: "View Customers",
+        code: "CUSTOMERS.VIEW",
         module: "customers"
     });
 
@@ -74,7 +81,7 @@ beforeEach(async () => {
     adminUserToken = onboardRes.body.data.accessToken;
     orgId = onboardRes.body.data.organization._id;
 
-    // Create a secondary user who does NOT have the customers.create permission
+    // Create a secondary user who does NOT have the permissions
     const normalUser = await User.create({
         name: "Normal User",
         email: "normal@example.com",
@@ -100,7 +107,7 @@ beforeEach(async () => {
     userWithoutPermToken = normalLogin.body.data.accessToken;
 });
 
-describe("Customers Management — Create Customer Integration Tests", () => {
+describe("Customers Management Integration Tests", () => {
 
     describe("POST /api/customers", () => {
         it("should successfully create a customer profile", async () => {
@@ -226,6 +233,89 @@ describe("Customers Management — Create Customer Integration Tests", () => {
                 });
 
             expect(res.status).toBe(401);
+        });
+    });
+
+    describe("GET /api/customers", () => {
+        beforeEach(async () => {
+            // Seed multiple customers in organization
+            await Customer.create([
+                { name: "Acme Corp", email: "info@acme.com", organizationId: orgId },
+                { name: "Beta Systems", email: "support@beta.com", organizationId: orgId },
+                { name: "Gamma Ltd", email: "sales@gamma.com", organizationId: orgId }
+            ]);
+        });
+
+        it("should successfully list customers with default pagination", async () => {
+            const res = await request(app)
+                .get("/api/customers")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.length).toBe(3);
+            expect(res.body.pagination.total).toBe(3);
+            expect(res.body.pagination.page).toBe(1);
+            expect(res.body.pagination.limit).toBe(20);
+        });
+
+        it("should list customers with custom limit and page parameters", async () => {
+            const res = await request(app)
+                .get("/api/customers?page=2&limit=2")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.pagination.total).toBe(3);
+            expect(res.body.pagination.pages).toBe(2);
+        });
+
+        it("should filter customers by search keyword", async () => {
+            const res = await request(app)
+                .get("/api/customers?search=beta")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.data[0].name).toBe("Beta Systems");
+        });
+
+        it("should sort customers by sortBy field", async () => {
+            const res = await request(app)
+                .get("/api/customers?sortBy=name&sortOrder=desc")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.data[0].name).toBe("Gamma Ltd");
+            expect(res.body.data[1].name).toBe("Beta Systems");
+            expect(res.body.data[2].name).toBe("Acme Corp");
+        });
+
+        it("should not return customers from other organizations", async () => {
+            // Seed customer in foreign org
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            await Customer.create({
+                name: "Foreign Customer",
+                email: "foreign@example.com",
+                organizationId: foreignOrg._id
+            });
+
+            const res = await request(app)
+                .get("/api/customers")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            // foreign customer should not be in listing
+            expect(res.body.data.some(c => c.name === "Foreign Customer")).toBe(false);
+            expect(res.body.pagination.total).toBe(3);
+        });
+
+        it("should return forbidden if user does not have CUSTOMERS.VIEW permission", async () => {
+            const res = await request(app)
+                .get("/api/customers")
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
+
+            expect(res.status).toBe(403);
         });
     });
 

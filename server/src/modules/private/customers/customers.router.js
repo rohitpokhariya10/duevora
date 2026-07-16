@@ -1,7 +1,7 @@
 // Importing modules
 import express from "express";
 import CustomersController from "./customers.controller.js";
-import { createCustomerValidators } from "./customers.validator.js";
+import { createCustomerValidators, listCustomersValidators } from "./customers.validator.js";
 import authMiddleware from "../../../shared/middlewares/auth.middleware.js";
 import permissionMiddleware from "../../../shared/middlewares/permission.middleware.js";
 
@@ -14,5 +14,12 @@ const controller = new CustomersController();
     @access Private (requires customers.create permission)
 */
 router.post("/", authMiddleware, permissionMiddleware("customers.create"), createCustomerValidators, controller.createCustomer);
+
+/*
+    @route GET /api/customers
+    @desc List customer profiles with pagination and search
+    @access Private (requires customers.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("customers.view"), listCustomersValidators, controller.listCustomers);
 
 export default router;

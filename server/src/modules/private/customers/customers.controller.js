@@ -50,6 +50,66 @@ class CustomersController {
 
     }
 
+    // list customers with pagination, sorting, and search
+    listCustomers = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // formulating customer filter based on organization isolation
+        const filter = {
+            organizationId
+        };
+
+        // checking if search query is provided
+        if (req.query.search) {
+
+            const searchRegex = {
+                $regex: req.query.search,
+                $options: "i"
+            };
+
+            filter.$or = [
+                { name: searchRegex },
+                { email: searchRegex }
+            ];
+
+        }
+
+        // parsing pagination and sorting parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        const sortBy = req.query.sortBy || "createdAt";
+        const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
+
+        // counting total records matching filter using the underlying mongoose model
+        const total = await this.customerDao.Model.countDocuments(filter);
+
+        // fetching customers using customer dao
+        const customers = await this.customerDao.find(filter, {
+            sort: { [sortBy]: sortOrder },
+            limit,
+            skip
+        });
+
+        // constructing pagination metadata
+        const pages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            success: true,
+            status: 200,
+            message: "Customers retrieved successfully",
+            data: customers,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages
+            }
+        });
+
+    }
+
 }
 
 export default CustomersController;
