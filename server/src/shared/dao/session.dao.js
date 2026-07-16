@@ -62,6 +62,22 @@ class SessionDao {
 
     }
 
+    async findById(id, session = null) {
+        return await this.SessionModel.findById(id).populate("userId").session(session);
+    }
+
+    async find(filter = {}, options = {}, session = null) {
+        let query = this.SessionModel.find(filter).populate("userId").session(session);
+        if (options.sort) query = query.sort(options.sort);
+        if (options.limit) query = query.limit(options.limit);
+        if (options.skip) query = query.skip(options.skip);
+        return await query;
+    }
+
+    async deleteById(id, session = null) {
+        return await this.SessionModel.findByIdAndDelete(id, { session });
+    }
+
 }
 
 export default SessionDao;
