@@ -4,6 +4,7 @@ import authRouter from "./auth.router.js";
 import organizationRouter from "../../modules/private/organization/organization.router.js";
 import employeesRouter from "../../modules/private/employees/employees.router.js";
 import usersRouter from "../../modules/private/users/users.router.js";
+import departmentsRouter from "../../modules/private/departments/departments.router.js";
 
 // making the router
 const router = express.Router();
@@ -13,6 +14,7 @@ router.use("/auth", authRouter);
 router.use("/organization", organizationRouter);
 router.use("/employees", employeesRouter);
 router.use("/users", usersRouter);
+router.use("/departments", departmentsRouter);
 
 // exporting the router
 export default router;
