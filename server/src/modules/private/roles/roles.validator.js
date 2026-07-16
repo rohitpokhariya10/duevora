@@ -1,6 +1,7 @@
 // Importing modules
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import validateErrors from "../../../shared/utils/validateErrors.util.js";
+import mongoose from "mongoose";
 
 const createRoleValidators = [
     // validating name field
@@ -28,4 +29,26 @@ const createRoleValidators = [
     validateErrors
 ];
 
-export { createRoleValidators };
+const bindPermissionsValidators = [
+    // validating roleId param
+    param("roleId")
+        .notEmpty()
+        .withMessage("Role ID is required")
+        .custom((value) => mongoose.Types.ObjectId.isValid(value))
+        .withMessage("Invalid Role ID"),
+
+    // validating permissionIds body array
+    body("permissionIds")
+        .isArray({ min: 1 })
+        .withMessage("Permission IDs must be a non-empty array"),
+
+    // validating individual permissionId inside array
+    body("permissionIds.*")
+        .custom((value) => mongoose.Types.ObjectId.isValid(value))
+        .withMessage("Invalid Permission ID"),
+
+    // validating errors
+    validateErrors
+];
+
+export { createRoleValidators, bindPermissionsValidators };
