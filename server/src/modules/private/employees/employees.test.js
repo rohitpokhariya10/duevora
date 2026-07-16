@@ -16,6 +16,7 @@ const { default: Employee } = await import("../../../shared/models/employee.mode
 const { default: Role } = await import("../../../shared/models/role.model.js");
 const { default: Permission } = await import("../../../shared/models/permission.model.js");
 const { default: Token } = await import("../../../shared/models/token.model.js");
+const { default: Department } = await import("../../../shared/models/department.model.js");
 
 let mongoServer;
 let app;
@@ -81,7 +82,7 @@ beforeEach(async () => {
     adminRoleId = role._id;
 });
 
-describe("Employee Member Invitation Integration Tests", () => {
+describe("Employee Member Invitation & Creation Integration Tests", () => {
 
     describe("POST /api/employees/invite", () => {
         it("should successfully generate an invitation token and send mail", async () => {
@@ -199,6 +200,103 @@ describe("Employee Member Invitation Integration Tests", () => {
 
             expect(res.status).toBe(400);
             expect(res.body.message).toContain("Email does not match invitation");
+        });
+    });
+
+    describe("POST /api/employees", () => {
+        it("should successfully create employee profile manually", async () => {
+            const res = await request(app)
+                .post("/api/employees")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    employeeCode: "EMP-100",
+                    firstName: "Alice",
+                    lastName: "Smith",
+                    email: "alice.smith@example.com",
+                    phone: "1234567890"
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.employeeCode).toBe("EMP-100");
+            expect(res.body.data.firstName).toBe("Alice");
+            expect(res.body.data.lastName).toBe("Smith");
+            expect(res.body.data.email).toBe("alice.smith@example.com");
+            expect(res.body.data.organizationId.toString()).toBe(orgId.toString());
+        });
+
+        it("should return conflict if employeeCode already exists in organization", async () => {
+            // First employee manually created
+            await request(app)
+                .post("/api/employees")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    employeeCode: "EMP-100",
+                    firstName: "Alice",
+                    lastName: "Smith",
+                    email: "alice.smith@example.com"
+                });
+
+            // Second employee with same code
+            const res = await request(app)
+                .post("/api/employees")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    employeeCode: "EMP-100",
+                    firstName: "Bob",
+                    lastName: "Jones",
+                    email: "bob.jones@example.com"
+                });
+
+            expect(res.status).toBe(409);
+        });
+
+        it("should return conflict if email already exists globally in employees", async () => {
+            // First employee manually created
+            await request(app)
+                .post("/api/employees")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    employeeCode: "EMP-100",
+                    firstName: "Alice",
+                    lastName: "Smith",
+                    email: "alice.smith@example.com"
+                });
+
+            // Second employee with same email but different code
+            const res = await request(app)
+                .post("/api/employees")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    employeeCode: "EMP-200",
+                    firstName: "Bob",
+                    lastName: "Jones",
+                    email: "alice.smith@example.com" // collision
+                });
+
+            expect(res.status).toBe(409);
+        });
+
+        it("should return bad request if departmentId belongs to another organization", async () => {
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            const foreignDept = await Department.create({
+                name: "Foreign Dept",
+                code: "FDEPT",
+                organizationId: foreignOrg._id
+            });
+
+            const res = await request(app)
+                .post("/api/employees")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    employeeCode: "EMP-100",
+                    firstName: "Alice",
+                    lastName: "Smith",
+                    email: "alice.smith@example.com",
+                    departmentId: foreignDept._id
+                });
+
+            expect(res.status).toBe(400);
         });
     });
 

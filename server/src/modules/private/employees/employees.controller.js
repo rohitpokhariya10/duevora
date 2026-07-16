@@ -2,10 +2,14 @@
 import crypto from "crypto";
 import TokenDao from "../../../shared/dao/token.dao.js";
 import RoleDao from "../../../shared/dao/role.dao.js";
+import EmployeeDao from "../../../shared/dao/employee.dao.js";
+import DepartmentDao from "../../../shared/dao/department.dao.js";
 import sendMail from "../../../shared/utils/sendMail.util.js";
 import Created from "../../../shared/responses/Created.response.js";
 import NotFound from "../../../shared/errors/NotFound.error.js";
 import Forbidden from "../../../shared/errors/Forbidden.error.js";
+import Conflict from "../../../shared/errors/Conflict.error.js";
+import BadRequest from "../../../shared/errors/BadRequest.error.js";
 
 // class to handle employee operations
 class EmployeesController {
@@ -17,6 +21,12 @@ class EmployeesController {
 
         // initializing the role dao
         this.roleDao = new RoleDao();
+
+        // initializing the employee dao
+        this.employeeDao = new EmployeeDao();
+
+        // initializing the department dao
+        this.departmentDao = new DepartmentDao();
 
     }
 
@@ -73,6 +83,81 @@ class EmployeesController {
             email,
             expiresIn: "15 minutes"
         });
+
+    }
+
+    // create a new employee manually
+    createEmployee = async (req, res) => {
+
+        const { employeeCode, firstName, lastName, email, phone, status, joiningDate, departmentId, userId } = req.body;
+        const organizationId = req.user.organizationId;
+
+        // checking organization isolation constraints
+        if (!organizationId) {
+
+            throw new Forbidden("User must belong to an organization to create employee profile.");
+
+        }
+
+        // verifying that employeeCode is unique within organization
+        const existingCode = await this.employeeDao.findOne({ organizationId, employeeCode });
+
+        if (existingCode) {
+
+            throw new Conflict("Employee code already exists in this organization.");
+
+        }
+
+        // verifying that email is globally unique in employee profiles
+        const existingEmail = await this.employeeDao.findOne({ email: email.toLowerCase() });
+
+        if (existingEmail) {
+
+            throw new Conflict("Employee with this email already exists.");
+
+        }
+
+        // verifying if userId is provided and belongs to another employee profile
+        if (userId) {
+
+            const existingUserLink = await this.employeeDao.findOne({ userId });
+
+            if (existingUserLink) {
+
+                throw new Conflict("This user ID is already linked to another employee.");
+
+            }
+
+        }
+
+        // verifying if departmentId belongs to the organization
+        if (departmentId) {
+
+            const department = await this.departmentDao.findOne({ _id: departmentId, organizationId });
+
+            if (!department) {
+
+                throw new BadRequest("Invalid department ID.");
+
+            }
+
+        }
+
+        // creating the employee record using employee dao
+        const employee = await this.employeeDao.create({
+            userId: userId || null,
+            organizationId,
+            employeeCode,
+            firstName,
+            lastName,
+            email: email.toLowerCase(),
+            phone: phone || "",
+            status: status || "active",
+            joiningDate: joiningDate || null,
+            departmentId: departmentId || null
+        });
+
+        return Created(res, "Employee profile created successfully", employee);
 
     }
 
