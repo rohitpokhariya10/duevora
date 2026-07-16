@@ -26,7 +26,10 @@ class CustomersController {
 
             const existingCustomer = await this.customerDao.findOne({
                 organizationId,
-                email: email.toLowerCase()
+                email: email.toLowerCase(),
+                isDeleted: {
+                    $ne: true
+                }
             });
 
             if (existingCustomer) {
@@ -45,7 +48,8 @@ class CustomersController {
             phone: phone || "",
             address: address || "",
             taxNumber: taxNumber || "",
-            status: status || "active"
+            status: status || "active",
+            isDeleted: false
         });
 
         return Created(res, "Customer profile created successfully", customer);
@@ -57,9 +61,12 @@ class CustomersController {
 
         const organizationId = req.user.organizationId;
 
-        // formulating customer filter based on organization isolation
+        // formulating customer filter based on organization isolation and excluding soft deleted customers
         const filter = {
-            organizationId
+            organizationId,
+            isDeleted: {
+                $ne: true
+            }
         };
 
         // checking if search query is provided
@@ -118,10 +125,13 @@ class CustomersController {
         const { customerId } = req.params;
         const organizationId = req.user.organizationId;
 
-        // finding the customer profile within the organization context
+        // finding the customer profile within the organization context and excluding soft deleted customers
         const customer = await this.customerDao.findOne({
             _id: customerId,
-            organizationId
+            organizationId,
+            isDeleted: {
+                $ne: true
+            }
         });
 
         if (!customer) {
@@ -142,7 +152,13 @@ class CustomersController {
         const organizationId = req.user.organizationId;
 
         // verifying target customer belongs to caller's organization context
-        const customer = await this.customerDao.findOne({ _id: customerId, organizationId });
+        const customer = await this.customerDao.findOne({
+            _id: customerId,
+            organizationId,
+            isDeleted: {
+                $ne: true
+            }
+        });
 
         if (!customer) {
 
@@ -158,6 +174,9 @@ class CustomersController {
                 email: email.toLowerCase(),
                 _id: {
                     $ne: customerId
+                },
+                isDeleted: {
+                    $ne: true
                 }
             });
 
@@ -180,6 +199,36 @@ class CustomersController {
         });
 
         return Ok(res, "Customer profile updated successfully", updatedCustomer);
+
+    }
+
+    // soft delete a customer profile
+    deleteCustomer = async (req, res) => {
+
+        const { customerId } = req.params;
+        const organizationId = req.user.organizationId;
+
+        // verifying target customer belongs to caller's organization context and excluding soft deleted customers
+        const customer = await this.customerDao.findOne({
+            _id: customerId,
+            organizationId,
+            isDeleted: {
+                $ne: true
+            }
+        });
+
+        if (!customer) {
+
+            throw new NotFound("Customer profile not found in your organization.");
+
+        }
+
+        // soft deleting customer by setting isDeleted to true
+        await this.customerDao.updateById(customerId, {
+            isDeleted: true
+        });
+
+        return Ok(res, "Customer profile deleted successfully");
 
     }
 

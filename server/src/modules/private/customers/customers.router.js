@@ -36,4 +36,11 @@ router.get("/:customerId", authMiddleware, permissionMiddleware("customers.view"
 */
 router.put("/:customerId", authMiddleware, permissionMiddleware("customers.update"), updateCustomerValidators, controller.updateCustomer);
 
+/*
+    @route DELETE /api/customers/:customerId
+    @desc Soft delete a customer profile
+    @access Private (requires customers.delete permission)
+*/
+router.delete("/:customerId", authMiddleware, permissionMiddleware("customers.delete"), getCustomerValidators, controller.deleteCustomer);
+
 export default router;

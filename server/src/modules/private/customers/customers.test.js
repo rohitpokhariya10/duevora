@@ -59,6 +59,12 @@ beforeEach(async () => {
         module: "customers"
     });
 
+    await Permission.create({
+        name: "Delete Customers",
+        code: "CUSTOMERS.DELETE",
+        module: "customers"
+    });
+
     // Create an Admin user
     const adminUser = await User.create({
         name: "Admin User",
@@ -457,6 +463,60 @@ describe("Customers Management Integration Tests", () => {
                 .send({
                     name: "Not Permitted Name"
                 });
+
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("DELETE /api/customers/:customerId", () => {
+        let testCustomer;
+
+        beforeEach(async () => {
+            testCustomer = await Customer.create({
+                name: "Alpha Corp",
+                email: "alpha@corp.com",
+                organizationId: orgId
+            });
+        });
+
+        it("should successfully soft delete a customer profile", async () => {
+            const res = await request(app)
+                .delete(`/api/customers/${testCustomer._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+
+            // Verify in DB that isDeleted is true
+            const dbCustomer = await Customer.findById(testCustomer._id);
+            expect(dbCustomer.isDeleted).toBe(true);
+
+            // Fetch details should now fail with 404
+            const getRes = await request(app)
+                .get(`/api/customers/${testCustomer._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+            expect(getRes.status).toBe(404);
+        });
+
+        it("should return 404 not found if customer belongs to another organization", async () => {
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            const foreignCustomer = await Customer.create({
+                name: "Foreign Customer",
+                email: "foreign@example.com",
+                organizationId: foreignOrg._id
+            });
+
+            const res = await request(app)
+                .delete(`/api/customers/${foreignCustomer._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(404);
+        });
+
+        it("should return 403 forbidden if user does not have CUSTOMERS.DELETE permission", async () => {
+            const res = await request(app)
+                .delete(`/api/customers/${testCustomer._id}`)
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
 
             expect(res.status).toBe(403);
         });
