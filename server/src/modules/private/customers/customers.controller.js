@@ -1,7 +1,9 @@
 // Importing modules
+import mongoose from "mongoose";
 import CustomerDao from "../../../shared/dao/customer.dao.js";
 import Conflict from "../../../shared/errors/Conflict.error.js";
 import NotFound from "../../../shared/errors/NotFound.error.js";
+import BadRequest from "../../../shared/errors/BadRequest.error.js";
 import Created from "../../../shared/responses/Created.response.js";
 import Ok from "../../../shared/responses/Ok.response.js";
 
@@ -229,6 +231,98 @@ class CustomersController {
         });
 
         return Ok(res, "Customer profile deleted successfully");
+
+    }
+
+    // bulk import customers using database replica transactions
+    bulkImportCustomers = async (req, res) => {
+
+        const { customers } = req.body;
+        const organizationId = req.user.organizationId;
+
+        // tracking unique emails in the input payload to check for local duplicates
+        const inputEmails = new Set();
+
+        for (const cust of customers) {
+
+            if (cust.email) {
+
+                const lowerEmail = cust.email.toLowerCase();
+
+                if (inputEmails.has(lowerEmail)) {
+
+                    throw new BadRequest(`Duplicate email found in import list: ${cust.email}`);
+
+                }
+
+                inputEmails.add(lowerEmail);
+
+            }
+
+        }
+
+        // starting a mongodb transaction session
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+
+            const importedCustomers = [];
+
+            for (const cust of customers) {
+
+                // verifying that email is unique within organization context if provided
+                if (cust.email) {
+
+                    const existingCustomer = await this.customerDao.findOne({
+                        organizationId,
+                        email: cust.email.toLowerCase(),
+                        isDeleted: {
+                            $ne: true
+                        }
+                    }, session);
+
+                    if (existingCustomer) {
+
+                        throw new Conflict(`Customer with email ${cust.email} already exists.`);
+
+                    }
+
+                }
+
+                // creating customer record using customer dao
+                const createdCust = await this.customerDao.create({
+                    organizationId,
+                    name: cust.name,
+                    email: cust.email ? cust.email.toLowerCase() : undefined,
+                    phone: cust.phone || "",
+                    address: cust.address || "",
+                    taxNumber: cust.taxNumber || "",
+                    status: cust.status || "active",
+                    isDeleted: false
+                }, session);
+
+                importedCustomers.push(createdCust);
+
+            }
+
+            // committing transaction and saving all documents
+            await session.commitTransaction();
+
+            return Created(res, "Customers imported successfully", importedCustomers);
+
+        } catch (error) {
+
+            // aborting transaction on any failure
+            await session.abortTransaction();
+            throw error;
+
+        } finally {
+
+            // ending the session
+            session.endSession();
+
+        }
 
     }
 

@@ -1,7 +1,7 @@
 // Importing modules
 import express from "express";
 import CustomersController from "./customers.controller.js";
-import { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators } from "./customers.validator.js";
+import { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators, bulkImportCustomerValidators } from "./customers.validator.js";
 import authMiddleware from "../../../shared/middlewares/auth.middleware.js";
 import permissionMiddleware from "../../../shared/middlewares/permission.middleware.js";
 
@@ -42,5 +42,12 @@ router.put("/:customerId", authMiddleware, permissionMiddleware("customers.updat
     @access Private (requires customers.delete permission)
 */
 router.delete("/:customerId", authMiddleware, permissionMiddleware("customers.delete"), getCustomerValidators, controller.deleteCustomer);
+
+/*
+    @route POST /api/customers/bulk-import
+    @desc Bulk import customer profiles using transactions
+    @access Private (requires customers.create permission)
+*/
+router.post("/bulk-import", authMiddleware, permissionMiddleware("customers.create"), bulkImportCustomerValidators, controller.bulkImportCustomers);
 
 export default router;

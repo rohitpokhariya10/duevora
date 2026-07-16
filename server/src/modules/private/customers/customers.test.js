@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import request from "supertest";
 
 // Mock sending mail
@@ -23,7 +23,12 @@ let adminUserToken;
 let userWithoutPermToken;
 
 beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    // MongoMemoryReplSet replica set is required for transactions to work
+    mongoServer = await MongoMemoryReplSet.create({
+        replSet: {
+            storageEngine: "wiredTiger"
+        }
+    });
     const uri = mongoServer.getUri();
     await mongoose.connect(uri);
     app = createApp();
@@ -519,6 +524,74 @@ describe("Customers Management Integration Tests", () => {
                 .set("Authorization", `Bearer ${userWithoutPermToken}`);
 
             expect(res.status).toBe(403);
+        });
+    });
+
+    describe("POST /api/customers/bulk-import", () => {
+        it("should successfully import multiple customers inside transaction", async () => {
+            const res = await request(app)
+                .post("/api/customers/bulk-import")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customers: [
+                        { name: "Bulk Cust 1", email: "bulk1@example.com" },
+                        { name: "Bulk Cust 2", email: "bulk2@example.com" }
+                    ]
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.length).toBe(2);
+
+            // Verify in DB
+            const c1 = await Customer.findOne({ email: "bulk1@example.com" });
+            expect(c1).toBeDefined();
+            expect(c1.name).toBe("Bulk Cust 1");
+
+            const c2 = await Customer.findOne({ email: "bulk2@example.com" });
+            expect(c2).toBeDefined();
+            expect(c2.name).toBe("Bulk Cust 2");
+        });
+
+        it("should fail validation if there are local duplicate emails in request", async () => {
+            const res = await request(app)
+                .post("/api/customers/bulk-import")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customers: [
+                        { name: "Cust A", email: "dup@example.com" },
+                        { name: "Cust B", email: "dup@example.com" }
+                    ]
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.message).toContain("Duplicate email found in import list");
+        });
+
+        it("should roll back transaction and import nothing on email conflict in DB", async () => {
+            // Seed one customer first
+            await Customer.create({
+                name: "Existing Customer",
+                email: "exist@example.com",
+                organizationId: orgId
+            });
+
+            // Attempt bulk import with one new and one duplicate email
+            const res = await request(app)
+                .post("/api/customers/bulk-import")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customers: [
+                        { name: "New Customer", email: "new@example.com" },
+                        { name: "Conflict Customer", email: "exist@example.com" }
+                    ]
+                });
+
+            expect(res.status).toBe(409);
+
+            // Verify that the NEW customer was rolled back and is NOT created in database
+            const dbNewCustomer = await Customer.findOne({ email: "new@example.com" });
+            expect(dbNewCustomer).toBeNull();
         });
     });
 

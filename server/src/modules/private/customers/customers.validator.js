@@ -134,4 +134,42 @@ const updateCustomerValidators = [
     validateErrors
 ];
 
-export { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators };
+const bulkImportCustomerValidators = [
+    // validating customers array
+    body("customers")
+        .isArray({ min: 1 })
+        .withMessage("Customers must be a non-empty array"),
+
+    // validating name field inside array
+    body("customers.*.name")
+        .notEmpty()
+        .withMessage("Customer name is required")
+        .isLength({ min: 2 })
+        .withMessage("Customer name must be at least 2 characters long"),
+
+    // validating email field inside array
+    body("customers.*.email")
+        .optional()
+        .isEmail()
+        .withMessage("Email is invalid"),
+
+    // validating phone field inside array
+    body("customers.*.phone")
+        .optional()
+        .isString(),
+
+    // validating address field inside array
+    body("customers.*.address")
+        .optional()
+        .isString(),
+
+    // validating taxNumber field inside array
+    body("customers.*.taxNumber")
+        .optional()
+        .isString(),
+
+    // validating errors
+    validateErrors
+];
+
+export { createCustomerValidators, listCustomersValidators, getCustomerValidators, updateCustomerValidators, bulkImportCustomerValidators };
