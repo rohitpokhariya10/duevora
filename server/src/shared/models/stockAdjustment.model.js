@@ -44,6 +44,12 @@ const stockAdjustmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Employee",
         required: [true, "Adjusted by employee reference is required"],
+    },
+
+    status: {
+        type: String,
+        enum: ["Draft", "Completed", "Cancelled"],
+        default: "Draft",
     }
 
 }, {

@@ -89,18 +89,6 @@ const resetPasswordValidators = [
 
 ];
 
-const verifyOtpValidators = [
-
-    // validating otp field
-    body("otp")
-        .notEmpty()
-        .withMessage("OTP is required"),
-
-    // validating errors
-    validateErrors
-
-];
-
 const googleLoginValidators = [
 
     // validating the credential field
@@ -113,4 +101,4 @@ const googleLoginValidators = [
 
 ];
 
-export { signupValidators, loginValidators, forgotPasswordValidators, resetPasswordValidators, verifyOtpValidators, googleLoginValidators };
+export { signupValidators, loginValidators, forgotPasswordValidators, resetPasswordValidators, googleLoginValidators };

@@ -1,0 +1,48 @@
+// Importing modules
+import TaxDao from "../../../shared/dao/tax.dao.js";
+import Conflict from "../../../shared/errors/Conflict.error.js";
+import Created from "../../../shared/responses/Created.response.js";
+
+// class to handle tax operations
+class TaxesController {
+
+    constructor() {
+
+        // initializing the tax dao
+        this.taxDao = new TaxDao();
+
+    }
+
+    // create a new tax
+    createTax = async (req, res) => {
+
+        const { name, rate, code } = req.body;
+        const organizationId = req.user.organizationId;
+
+        // verifying tax code is unique within organization context
+        const existingTax = await this.taxDao.findOne({
+            organizationId,
+            code: code.toUpperCase()
+        });
+
+        if (existingTax) {
+
+            throw new Conflict("Tax code already exists in your organization.");
+
+        }
+
+        // creating tax record using tax dao
+        const tax = await this.taxDao.create({
+            organizationId,
+            name,
+            rate,
+            code: code.toUpperCase()
+        });
+
+        return Created(res, "Tax created successfully", tax);
+
+    }
+
+}
+
+export default TaxesController;

@@ -22,6 +22,10 @@ const envSchema = z.object({
     GOOGLE_CLIENT_ID: z.string().default(envConstants.GOOGLE_CLIENT_ID),
     GOOGLE_CLIENT_SECRET: z.string().default(envConstants.GOOGLE_CLIENT_SECRET),
     GOOGLE_REDIRECT_URI: z.string().url().default(envConstants.GOOGLE_REDIRECT_URI),
+    SEND_MAIL: z.preprocess((val) => {
+        if (typeof val === "string") return val.toLowerCase() === "true";
+        return val;
+    }, z.boolean()).default(envConstants.SEND_MAIL),
 });
 
 // parsing and validating environment variables

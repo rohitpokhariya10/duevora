@@ -3,6 +3,8 @@
 import UserDao from "../../../shared/dao/user.dao.js";
 import SessionDao from "../../../shared/dao/session.dao.js";
 import TokenDao from "../../../shared/dao/token.dao.js";
+import EmployeeDao from "../../../shared/dao/employee.dao.js";
+import EmployeeRoleDao from "../../../shared/dao/employeeRole.dao.js";
 
 import { COOKIE_EXPIRY_TIME, REFRESH_TOKEN_COOKIE_OPTIONS, OTP_EXPIRY_TIME, RESET_PASSWORD_TOKEN_EXPIRY_TIME } from "../../../shared/constants/tokens.constants.js";
 
@@ -24,7 +26,7 @@ import Ok from "../../../shared/responses/Ok.response.js";
 
 import env from "../../../shared/config/env.config.js";
 
-// clas to handle authentication operations
+// class to handle public authentication operations
 class AuthController {
 
     constructor() {
@@ -43,34 +45,100 @@ class AuthController {
     signup = async (req, res) => {
 
         // getting the user from the request body
-        const { name, email, password } = req.body;
+        const { name, email, password, token } = req.body;
+
+        let tokenDoc = null;
+        if (token) {
+
+            // finding the invitation token in the database
+            tokenDoc = await this.tokenDao.findTokenByValue(token);
+
+            if (!tokenDoc || tokenDoc.type !== "invitation") {
+
+                throw new BadRequest("Invalid or expired invitation token.");
+
+            }
+
+            if (tokenDoc.email !== email) {
+
+                throw new BadRequest("Email does not match invitation.");
+
+            }
+
+        }
 
         // creating a new user using the user dao
         const user = await this.userDao.createUser({
             name,
             email,
             password,
-            providers: ["local"]
+            providers: ["local"],
+            isVerified: token ? true : false
         });
+
+        let employee = null;
+        if (tokenDoc) {
+
+            // initializing employee and employee role daos
+            const employeeDao = new EmployeeDao();
+            const employeeRoleDao = new EmployeeRoleDao();
+
+            // finding existing employees to calculate the new code
+            const existingEmployees = await employeeDao.find({ organizationId: tokenDoc.organizationId });
+            const count = existingEmployees.length;
+
+            // splitting full name into first and last name
+            const nameParts = name.trim().split(/\s+/);
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(" ") || firstName;
+
+            // creating employee profile using the employee dao
+            employee = await employeeDao.create({
+                userId: user._id,
+                organizationId: tokenDoc.organizationId,
+                employeeCode: `EMP-${count + 1}`,
+                firstName,
+                lastName,
+                email: user.email,
+                status: "active"
+            });
+
+            // assigning role to employee
+            await employeeRoleDao.create({
+                employeeId: employee._id,
+                roleId: tokenDoc.roleId
+            });
+
+            // deleting the invitation token
+            await this.tokenDao.deleteTokenByValue(token);
+
+        }
 
         // creating session and tokens
         const { sanitizedUser, accessToken } = await createSession(user, res, this.sessionDao);
 
-        // generate the otp to verify the user email
-        const otp = generateOTPToken();
+        if (!tokenDoc) {
 
-        // setting otp in the database using the token dao
-        await this.tokenDao.createToken({
-            email: user.email,
-            type: "otp",
-            value: otp,
-            expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME)
-        });
+            // generate the otp to verify the user email
+            const otp = generateOTPToken();
 
-        sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
+            // setting otp in the database using the token dao
+            await this.tokenDao.createToken({
+                email: user.email,
+                type: "otp",
+                value: otp,
+                expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME)
+            });
 
-        // seding response with access token
-        return Created(res, "Otp Sent Successfully for verification", { user: sanitizedUser, accessToken: accessToken });
+            sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
+
+            // sending response with access token
+            return Created(res, "Otp Sent Successfully for verification", { user: sanitizedUser, accessToken: accessToken });
+
+        }
+
+        // if signing up with token, return user, employee and accessToken
+        return Created(res, "User registered successfully via invitation", { user: sanitizedUser, employee, accessToken: accessToken });
 
     }
 
@@ -98,7 +166,7 @@ class AuthController {
         // creating session and tokens
         const { sanitizedUser, accessToken } = await createSession(user, res, this.sessionDao);
 
-        // seding response with access token
+        // sending response with access token
         return Ok(res, "User Logged in Successfully", { user: sanitizedUser, accessToken: accessToken });
     }
 
@@ -142,7 +210,7 @@ class AuthController {
         // creating session and tokens
         const { sanitizedUser, accessToken } = await createSession(user, res, this.sessionDao);
 
-        // seding response with access token
+        // sending response with access token
         return Ok(res, "User Logged in Successfully via Google", { user: sanitizedUser, accessToken: accessToken });
 
     }
@@ -211,67 +279,6 @@ class AuthController {
         return res.redirect(`${clientOrigin}/dashboard`);
     }
 
-    verifyEmail = async (req, res) => {
-
-        // getting the otp from the request
-        const { otp } = req.body;
-
-        // taking the user id from the request
-        const user = req.user;
-
-        // finding the otp in the database using the token dao
-        const token = await this.tokenDao.findTokenByValue(otp);
-
-        // checking if the token exists
-        if (!token) {
-
-            // if the token does not exist, throw an unauthorized error
-            throw new BadRequest("Invalid OTP");
-
-        }
-
-        // Updating the user
-        const updatedUser = await this.userDao.updateUserById(user._id, { isVerified: true });
-
-        // sanitizing the updated user 
-        const sanitizedUser = sanitizeUser(updatedUser);
-
-        // generating the new accesstoken
-        const accessToken = generateAccessToken(sanitizedUser);
-
-        return Ok(res, "Email Verified Successfully", { user: sanitizedUser, accessToken: accessToken });
-
-    }
-
-    sendOtp = async (req, res) => {
-
-        // taking the user from the request 
-        const user = req.user;
-
-        // deleting the old token if exist
-        const oldOtp = await this.tokenDao.deleteTokenByEmail(user.email, "otp");
-
-        // generating the new token 
-        const otp = generateOTPToken();
-
-        // setting the otp in the databse 
-        const otpSet = await this.tokenDao.createToken(
-            {
-                email: user.email,
-                type: "otp",
-                value: otp,
-                expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME)
-            }
-        );
-
-        // Sending the otp to the user
-        sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
-
-        // returning the response 
-        return Ok(res, "Otp Sent SuccessFully");
-
-    }
-
     forgotPassword = async (req, res) => {
 
         // getting the email from the request body 
@@ -283,7 +290,7 @@ class AuthController {
         // generating the new reset token 
         const resetToken = generateResetPasswordToken();
 
-        // setting the reset token in the databse 
+        // setting the reset token in the database 
         const resetTokenSet = await this.tokenDao.createToken({
             email: email,
             type: "reset",
@@ -328,121 +335,11 @@ class AuthController {
         // saving the user
         await user.save();
 
-        // delteing the token 
+        // deleting the token 
         await this.tokenDao.deleteTokenByValue(token);
 
-        // seding the response 
+        // sending the response 
         return Ok(res, "Password reset Successfully");
-
-    }
-
-    refresh = async (req, res) => {
-
-        // getting the refresh token from the request object
-        const refreshToken = req.refreshToken;
-
-        // getting the session from the request object
-        const session = req.session;
-
-        // getting the session from the database using the session dao
-        const sessionInDb = await this.sessionDao.findSessionByRefreshTokenandSessionId(refreshToken, session.sessionId);
-
-        // if the session is not found, throw an unauthorized error
-        if (!sessionInDb || !sessionInDb.userId) {
-
-            // if the session is not found, throw an unauthorized error
-            throw new Unauthorized("Session not found.");
-
-        }
-
-        // getting the sanitized user from the session
-        const sanitizedUser = sanitizeUser(sessionInDb.userId);
-
-        // generate the new access token using the user id from the session
-        const accessToken = generateAccessToken(sanitizedUser);
-
-        // generating a new refresh token using the session id and the user id from the session
-        const newRefreshToken = generateRefreshToken({
-            sessionId: session.sessionId,
-            userId: sessionInDb.userId._id.toString()
-        });
-
-        // updating the session in the database with the new refresh token and the new expiry time
-        const updatedSession = await this.sessionDao.updateSessionByRefreshTokenandSessionId(refreshToken, session.sessionId, {
-            refreshToken: newRefreshToken,
-            expiresAt: new Date(Date.now() + COOKIE_EXPIRY_TIME)
-        });
-
-        // setting the new refresh token in the cookie
-        res.cookie("refreshToken", newRefreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
-
-        // sending the response with the new access token
-        return Ok(res, "Access token refreshed successfully", { accessToken: accessToken });
-
-    }
-
-    me = async (req, res) => {
-
-        // getting the refresh token from the request object
-        const refreshToken = req.refreshToken;
-
-        // getting the session from the request object
-        const session = req.session;
-
-        // getting the session from the database using the session dao
-        const sessionInDb = await this.sessionDao.findSessionByRefreshTokenandSessionId(refreshToken, session.sessionId);
-
-        // if the session is not found, throw an unauthorized error
-        if (!sessionInDb || !sessionInDb.userId) {
-
-            // if the session is not found, throw an unauthorized error
-            throw new Unauthorized("Session not found.");
-
-        }
-
-        // getting the sanitized user from the session
-        const sanitizedUser = sanitizeUser(sessionInDb.userId);
-
-        // generating a new access token using the user id from the session
-        const accessToken = generateAccessToken(sanitizedUser);
-
-        // sending the response with the sanitized user
-        return Ok(res, "User fetched successfully", { user: sanitizedUser, accessToken: accessToken });
-
-    }
-
-    logout = async (req, res) => {
-
-        // getting the refresh token from the request object
-        const refreshToken = req.refreshToken;
-
-        // getting the session from the request object
-        const session = req.session;
-
-        // deleting the session from the database using the session dao
-        const deletedSession = await this.sessionDao.deleteSessionByRefreshTokenandSessionId(refreshToken, session.sessionId);
-
-        // clearing the refresh token from the cookie
-        res.clearCookie("refreshToken", REFRESH_TOKEN_COOKIE_OPTIONS);
-
-        // sending the response
-        return Ok(res, "User logged out successfully");
-
-    }
-
-    logoutAll = async (req, res) => {
-
-        // getting the user id from the request object
-        const userId = req.session.userId;
-
-        // deleting all the sessions for the user from the database using the session dao
-        const deletedSessions = await this.sessionDao.deleteSessionByUserId(userId);
-
-        // clearing the refresh token from the cookie
-        res.clearCookie("refreshToken", REFRESH_TOKEN_COOKIE_OPTIONS);
-
-        // sending the response
-        return Ok(res, "User logged out from all devices successfully");
 
     }
 

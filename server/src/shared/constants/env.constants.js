@@ -13,6 +13,7 @@ const envConstants = {
     GOOGLE_CLIENT_ID: "",
     GOOGLE_CLIENT_SECRET: "",
     GOOGLE_REDIRECT_URI: "http://localhost:3000/api/auth/google/callback",
+    SEND_MAIL: false,
 };
 
 export default envConstants;
