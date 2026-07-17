@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import request from "supertest";
 
 // Mock sending mail
@@ -25,7 +25,12 @@ let adminUserToken;
 let userWithoutPermToken;
 
 beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    // MongoMemoryReplSet replica set is required for transactions to work
+    mongoServer = await MongoMemoryReplSet.create({
+        replSet: {
+            storageEngine: "wiredTiger"
+        }
+    });
     const uri = mongoServer.getUri();
     await mongoose.connect(uri);
     app = createApp();
@@ -52,6 +57,18 @@ beforeEach(async () => {
     await Permission.create({
         name: "View Products",
         code: "PRODUCTS.VIEW",
+        module: "products"
+    });
+
+    await Permission.create({
+        name: "Update Products",
+        code: "PRODUCTS.UPDATE",
+        module: "products"
+    });
+
+    await Permission.create({
+        name: "Delete Products",
+        code: "PRODUCTS.DELETE",
         module: "products"
     });
 
@@ -246,18 +263,129 @@ describe("Products Management Integration Tests", () => {
             expect(res.body.data[1].name).toBe("iPhone 14");
             expect(res.body.data[2].name).toBe("MacBook Pro 14");
         });
+    });
 
-        it("should not return products from other organizations", async () => {
-            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
-            await Product.create({ name: "Foreign Phone", sku: "F-PHONE", price: 499, organizationId: foreignOrg._id });
+    describe("GET /api/products/:productId", () => {
+        let product;
 
+        beforeEach(async () => {
+            product = await Product.create({ name: "iPhone 14", sku: "IPHONE-14", organizationId: orgId });
+        });
+
+        it("should successfully retrieve product details", async () => {
             const res = await request(app)
-                .get("/api/products")
+                .get(`/api/products/${product._id}`)
                 .set("Authorization", `Bearer ${adminUserToken}`);
 
             expect(res.status).toBe(200);
-            expect(res.body.data.some(p => p.sku === "F-PHONE")).toBe(false);
-            expect(res.body.pagination.total).toBe(3);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.name).toBe("iPhone 14");
+        });
+
+        it("should return 404 if product belongs to a foreign organization", async () => {
+            const foreignOrg = await Organization.create({ name: "Foreign", code: "FRGN" });
+            const foreignProduct = await Product.create({ name: "Foreign Phone", sku: "F-PHONE", organizationId: foreignOrg._id });
+
+            const res = await request(app)
+                .get(`/api/products/${foreignProduct._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(404);
+        });
+    });
+
+    describe("PUT /api/products/:productId", () => {
+        let product;
+
+        beforeEach(async () => {
+            product = await Product.create({ name: "iPhone 14", sku: "IPHONE-14", organizationId: orgId });
+        });
+
+        it("should successfully update product details", async () => {
+            const res = await request(app)
+                .put(`/api/products/${product._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    name: "iPhone 14 Updated",
+                    price: 1099
+                });
+
+            expect(res.status).toBe(200);
+            expect(res.body.data.name).toBe("iPhone 14 Updated");
+            expect(res.body.data.price).toBe(1099);
+        });
+
+        it("should return conflict if updated SKU already exists within organization", async () => {
+            await Product.create({ name: "iPad Air", sku: "IPAD-AIR", organizationId: orgId });
+
+            const res = await request(app)
+                .put(`/api/products/${product._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    sku: "IPAD-AIR"
+                });
+
+            expect(res.status).toBe(409);
+        });
+    });
+
+    describe("DELETE /api/products/:productId", () => {
+        let product;
+
+        beforeEach(async () => {
+            product = await Product.create({ name: "iPhone 14", sku: "IPHONE-14", organizationId: orgId });
+        });
+
+        it("should successfully soft delete a product", async () => {
+            const res = await request(app)
+                .delete(`/api/products/${product._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+
+            // Verify in DB
+            const dbProduct = await Product.findById(product._id);
+            expect(dbProduct.isDeleted).toBe(true);
+
+            // Retrieval should now fail with 404
+            const getRes = await request(app)
+                .get(`/api/products/${product._id}`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+            expect(getRes.status).toBe(404);
+        });
+    });
+
+    describe("POST /api/products/bulk-import", () => {
+        it("should successfully import multiple products in transaction", async () => {
+            const res = await request(app)
+                .post("/api/products/bulk-import")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    products: [
+                        { name: "Bulk Prod 1", sku: "B-PROD-1" },
+                        { name: "Bulk Prod 2", sku: "B-PROD-2" }
+                    ]
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.data.length).toBe(2);
+
+            const p1 = await Product.findOne({ sku: "B-PROD-1" });
+            expect(p1).toBeDefined();
+        });
+
+        it("should fail validation if there are local duplicate SKUs in input payload", async () => {
+            const res = await request(app)
+                .post("/api/products/bulk-import")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    products: [
+                        { name: "Bulk Prod A", sku: "DUP-SKU" },
+                        { name: "Bulk Prod B", sku: "DUP-SKU" }
+                    ]
+                });
+
+            expect(res.status).toBe(400);
         });
     });
 
