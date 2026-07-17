@@ -156,7 +156,7 @@ describe("Delivery Challans Management Integration Tests", () => {
             });
 
             const foreignOrg = await Organization.create({ name: "Foreign Corp", code: "FRGN" });
-            const foreignUser = await User.create({ name: "Foreign User", email: "foreign@example.com", password: "password123" });
+            const foreignUser = await User.create({ name: "Foreign User", email: "foreign@example.com", password: "password123", isVerified: true });
 
             const loginRes = await request(app)
                 .post("/api/auth/login")
@@ -173,7 +173,8 @@ describe("Delivery Challans Management Integration Tests", () => {
                 });
 
             const foreignToken = onboardRes.body.data.accessToken;
-            const foreignCustomer = await Customer.create({ name: "Foreign Customer", organizationId: foreignOrg._id });
+            const foreignOrgId = onboardRes.body.data.organization._id;
+            const foreignCustomer = await Customer.create({ name: "Foreign Customer", organizationId: foreignOrgId });
 
             const res = await request(app)
                 .post("/api/delivery-challans")

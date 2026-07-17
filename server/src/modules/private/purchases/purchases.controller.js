@@ -50,7 +50,9 @@ class PurchasesController {
             // verifying purchase number is unique within organization context
             const existingPurchase = await this.purchaseDao.findOne({
                 organizationId,
-                purchaseNumber: purchaseNumber.trim()
+                purchaseNumber: {
+                    $regex: new RegExp(`^${purchaseNumber.trim()}$`, "i")
+                }
             }, session);
 
             if (existingPurchase) {

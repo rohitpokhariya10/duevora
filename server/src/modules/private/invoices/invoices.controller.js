@@ -66,7 +66,9 @@ class InvoicesController {
             // verifying invoice number is unique within organization context
             const existingInvoice = await this.invoiceDao.findOne({
                 organizationId,
-                invoiceNumber: invoiceNumber.trim()
+                invoiceNumber: {
+                    $regex: new RegExp(`^${invoiceNumber.trim()}$`, "i")
+                }
             }, session);
 
             if (existingInvoice) {
