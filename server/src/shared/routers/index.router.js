@@ -41,6 +41,10 @@ import incomesRouter from "../../modules/private/incomes/incomes.router.js";
 import openingBalancesRouter from "../../modules/private/openingBalances/openingBalances.router.js";
 import budgetsRouter from "../../modules/private/budgets/budgets.router.js";
 import bankTransactionsRouter from "../../modules/private/bankTransactions/bankTransactions.router.js";
+import notificationsRouter from "../../modules/private/notifications/notifications.router.js";
+import auditLogsRouter from "../../modules/private/auditLogs/auditLogs.router.js";
+import settingsRouter from "../../modules/private/settings/settings.router.js";
+import reportsRouter from "../../modules/private/reports/reports.router.js";
 
 // making the router
 const router = express.Router();
@@ -87,6 +91,10 @@ router.use("/incomes", incomesRouter);
 router.use("/opening-balances", openingBalancesRouter);
 router.use("/budgets", budgetsRouter);
 router.use("/bank-transactions", bankTransactionsRouter);
+router.use("/notifications", notificationsRouter);
+router.use("/audit-logs", auditLogsRouter);
+router.use("/settings", settingsRouter);
+router.use("/reports", reportsRouter);
 
 // exporting the router
 export default router;
