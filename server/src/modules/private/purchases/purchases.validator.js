@@ -1,5 +1,5 @@
 // Importing modules
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import validateErrors from "../../../shared/utils/validateErrors.util.js";
 import mongoose from "mongoose";
 
@@ -60,4 +60,16 @@ const createPurchaseValidators = [
     validateErrors
 ];
 
-export { createPurchaseValidators };
+const approvePurchaseValidators = [
+    // validating purchaseId param
+    param("purchaseId")
+        .notEmpty()
+        .withMessage("Purchase ID is required")
+        .custom((value) => mongoose.Types.ObjectId.isValid(value))
+        .withMessage("Invalid Purchase ID"),
+
+    // validating errors
+    validateErrors
+];
+
+export { createPurchaseValidators, approvePurchaseValidators };

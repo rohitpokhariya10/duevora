@@ -17,6 +17,12 @@ const { default: Permission } = await import("../../../shared/models/permission.
 const { default: Vendor } = await import("../../../shared/models/vendor.model.js");
 const { default: Product } = await import("../../../shared/models/product.model.js");
 const { default: Tax } = await import("../../../shared/models/tax.model.js");
+const { default: Warehouse } = await import("../../../shared/models/warehouse.model.js");
+const { default: Inventory } = await import("../../../shared/models/inventory.model.js");
+const { default: StockMovement } = await import("../../../shared/models/stockMovement.model.js");
+const { default: JournalEntry } = await import("../../../shared/models/journalEntry.model.js");
+const { default: JournalEntryLine } = await import("../../../shared/models/journalEntryLine.model.js");
+const { default: LedgerEntry } = await import("../../../shared/models/ledgerEntry.model.js");
 const { default: Purchase } = await import("../../../shared/models/purchase.model.js");
 
 let mongoServer;
@@ -48,10 +54,16 @@ beforeEach(async () => {
         await collections[key].deleteMany({});
     }
 
-    // Seed permission
+    // Seed permissions
     await Permission.create({
         name: "Create Purchases",
         code: "PURCHASES.CREATE",
+        module: "purchases"
+    });
+
+    await Permission.create({
+        name: "Update Purchases",
+        code: "PURCHASES.UPDATE",
         module: "purchases"
     });
 
@@ -108,12 +120,13 @@ beforeEach(async () => {
 });
 
 describe("Purchases Management Integration Tests", () => {
-    let vendor, product, tax;
+    let vendor, product, tax, warehouse;
 
     beforeEach(async () => {
         vendor = await Vendor.create({ name: "Supplier Inc", organizationId: orgId });
         product = await Product.create({ name: "Widget A", sku: "WDG-A", organizationId: orgId });
         tax = await Tax.create({ name: "GST 10%", rate: 10, code: "GST10", organizationId: orgId });
+        warehouse = await Warehouse.create({ name: "Central", code: "CWH", organizationId: orgId });
     });
 
     describe("POST /api/purchases", () => {
@@ -139,9 +152,6 @@ describe("Purchases Management Integration Tests", () => {
             expect(res.body.success).toBe(true);
             expect(res.body.data.purchaseNumber).toBe("PB-2026-001");
             expect(res.body.data.status).toBe("billed");
-            // calculations: subTotal = 5 * 200 = 1000
-            // tax = 1000 * 10% = 100
-            // grandTotal = 1100
             expect(res.body.data.subTotal).toBe(1000);
             expect(res.body.data.taxTotal).toBe(100);
             expect(res.body.data.grandTotal).toBe(1100);
@@ -164,7 +174,7 @@ describe("Purchases Management Integration Tests", () => {
                 .set("Authorization", `Bearer ${adminUserToken}`)
                 .send({
                     vendorId: vendor._id,
-                    purchaseNumber: "pb-2026-001", // case-insensitive check
+                    purchaseNumber: "pb-2026-001",
                     purchaseDate: "2026-07-17",
                     items: [
                         {
@@ -194,6 +204,99 @@ describe("Purchases Management Integration Tests", () => {
                         }
                     ]
                 });
+
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("POST /api/purchases/:purchaseId/approve", () => {
+        let purchase;
+
+        beforeEach(async () => {
+            const res = await request(app)
+                .post("/api/purchases")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    vendorId: vendor._id,
+                    purchaseNumber: "PB-2026-002",
+                    purchaseDate: "2026-07-17",
+                    items: [
+                        {
+                            productId: product._id,
+                            quantity: 5,
+                            unitPrice: 200,
+                            taxId: tax._id
+                        }
+                    ]
+                });
+
+            purchase = res.body.data;
+        });
+
+        it("should successfully approve recorded purchase and create ledger postings", async () => {
+            const res = await request(app)
+                .post(`/api/purchases/${purchase._id}/approve`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.status).toBe("received");
+
+            // Verify inventory incremented: 0 + 5 = 5
+            const dbInv = await Inventory.findOne({ productId: product._id, warehouseId: warehouse._id });
+            expect(dbInv.quantity).toBe(5);
+
+            // Verify stock movement logged
+            const dbMov = await StockMovement.findOne({ productId: product._id, referenceId: purchase._id });
+            expect(dbMov).toBeDefined();
+            expect(dbMov.type).toBe("in");
+            expect(dbMov.quantity).toBe(5);
+            expect(dbMov.referenceType).toBe("Purchase");
+
+            // Verify JournalEntry posted
+            const je = await JournalEntry.findOne({ organizationId: orgId });
+            expect(je).toBeDefined();
+            expect(je.status).toBe("posted");
+
+            // Verify JournalEntryLines (Inventory Asset, GST Input, Accounts Payable)
+            const lines = await JournalEntryLine.find({ journalEntryId: je._id }).populate("accountId");
+            expect(lines.length).toBe(3);
+
+            const invLine = lines.find(l => l.accountId.code === "INVENTORY_ASSET");
+            expect(invLine.debit).toBe(1000);
+            expect(invLine.credit).toBe(0);
+
+            const gstLine = lines.find(l => l.accountId.code === "GST_INPUT_ASSET");
+            expect(gstLine.debit).toBe(100);
+            expect(gstLine.credit).toBe(0);
+
+            const apLine = lines.find(l => l.accountId.code === "ACCOUNTS_PAYABLE");
+            expect(apLine.debit).toBe(0);
+            expect(apLine.credit).toBe(1100);
+
+            // Verify LedgerEntries
+            const ledgers = await LedgerEntry.find({ journalEntryId: je._id }).populate("accountId");
+            expect(ledgers.length).toBe(3);
+        });
+
+        it("should return bad request when trying to approve an already approved purchase", async () => {
+            // Approve once
+            await request(app)
+                .post(`/api/purchases/${purchase._id}/approve`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            // Approve again
+            const res = await request(app)
+                .post(`/api/purchases/${purchase._id}/approve`)
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(400);
+        });
+
+        it("should return forbidden if user does not have PURCHASES.UPDATE permission", async () => {
+            const res = await request(app)
+                .post(`/api/purchases/${purchase._id}/approve`)
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
 
             expect(res.status).toBe(403);
         });
