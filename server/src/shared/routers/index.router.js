@@ -22,6 +22,7 @@ import taxesRouter from "../../modules/private/taxes/taxes.router.js";
 import quotationsRouter from "../../modules/private/quotations/quotations.router.js";
 import salesOrdersRouter from "../../modules/private/salesOrders/salesOrders.router.js";
 import deliveryChallansRouter from "../../modules/private/deliveryChallans/deliveryChallans.router.js";
+import invoicesRouter from "../../modules/private/invoices/invoices.router.js";
 
 // making the router
 const router = express.Router();
@@ -49,6 +50,7 @@ router.use("/taxes", taxesRouter);
 router.use("/quotations", quotationsRouter);
 router.use("/sales-orders", salesOrdersRouter);
 router.use("/delivery-challans", deliveryChallansRouter);
+router.use("/invoices", invoicesRouter);
 
 // exporting the router
 export default router;
