@@ -1,4 +1,5 @@
 import { useState } from "react";
+import styles from "../css/ForgotPasswordForm.module.css";
 import InputField from "./InputField";
 import LoginButton from "./LoginButton";
 import SwitchText from "./SwitchText";
@@ -12,7 +13,7 @@ export default function ForgotPasswordForm({ onSubmit, onBack, isLoading }) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={handleSubmit}>
       <InputField
         label="EMAIL"
         type="email"
