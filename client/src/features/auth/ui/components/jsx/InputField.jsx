@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MdEmail, MdLock } from "react-icons/md";
+import { MdEmail, MdLock, MdPerson } from "react-icons/md";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import styles from "../css/InputField.module.css";
 
@@ -20,6 +20,7 @@ export default function InputField({
   const iconMap = {
     email: MdEmail,
     lock: MdLock,
+    person: MdPerson,
   };
 
   const IconComponent = iconMap[icon];

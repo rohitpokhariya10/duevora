@@ -1,12 +1,12 @@
 import InputField from "./InputField";
 
-export default function PasswordField({ value, onChange }) {
+export default function PasswordField({ label, name, placeholder, value, onChange }) {
   return (
     <InputField
-      label="PASSWORD"
+      label={label || "PASSWORD"}
       type="password"
-      name="password"
-      placeholder="Enter your password"
+      name={name || "password"}
+      placeholder={placeholder || "Enter your password"}
       icon="lock"
       value={value}
       onChange={onChange}

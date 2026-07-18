@@ -34,5 +34,20 @@ export default function useAuth() {
     }
   }, []);
 
-  return { login, loginWithGoogle, isLoading, error };
+  const signup = useCallback(async (name, email, password) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // TODO: Integrate with auth API
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return { success: true };
+    } catch (err) {
+      setError(err.message || "Signup failed");
+      return { success: false, error: err.message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { login, signup, loginWithGoogle, isLoading, error };
 }

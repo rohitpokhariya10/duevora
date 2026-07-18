@@ -1,11 +1,1 @@
-import React from 'react'
-
-const RegisterPage = () => {
-  return (
-    <div>
-      register page
-    </div>
-  )
-}
-
-export default RegisterPage
+export { default } from "../ui/pages/SignupPage";

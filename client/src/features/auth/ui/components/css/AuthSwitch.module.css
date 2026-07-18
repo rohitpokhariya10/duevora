@@ -1,0 +1,42 @@
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-card);
+}
+
+.option {
+  flex: 1;
+  padding: 12px 24px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  font-family: var(--font-family);
+  text-align: center;
+}
+
+.option:hover {
+  color: var(--color-text);
+}
+
+.optionActive {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.optionActive:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
