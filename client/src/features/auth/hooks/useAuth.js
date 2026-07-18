@@ -49,5 +49,20 @@ export default function useAuth() {
     }
   }, []);
 
-  return { login, signup, loginWithGoogle, isLoading, error };
+  const forgotPassword = useCallback(async (email) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // TODO: Integrate with auth API
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return { success: true };
+    } catch (err) {
+      setError(err.message || "Failed to send reset link");
+      return { success: false, error: err.message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { login, signup, loginWithGoogle, forgotPassword, isLoading, error };
 }
