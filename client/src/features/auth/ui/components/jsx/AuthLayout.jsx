@@ -19,6 +19,13 @@ export default function AuthLayout({ initialMode = "login" }) {
   const switchToLogin = () => navigate("/login");
   const switchToSignup = () => navigate("/register");
 
+  const handleSignup = async (name, email, password) => {
+    const result = await signup(name, email, password);
+    if (result.success) {
+      navigate("/verify-email", { state: { email: result.email } });
+    }
+  };
+
   return (
     <>
       <BackgroundGrid />
@@ -47,7 +54,7 @@ export default function AuthLayout({ initialMode = "login" }) {
             />
           ) : (
             <SignupForm
-              onSignup={signup}
+              onSignup={handleSignup}
               onGoogleLogin={loginWithGoogle}
               isLoading={isLoading}
               onSwitch={switchToLogin}

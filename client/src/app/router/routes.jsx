@@ -1,6 +1,7 @@
 import HomePage from "../../features/landing/pages/HomePage";
 import LoginPage from "../../features/auth/pages/LoginPage";
 import RegisterPage from "../../features/auth/pages/RegisterPage";
+import VerifyEmailPage from "../../features/auth/pages/VerifyEmailPage";
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
 
 import MainLayout from "../layouts/MainLayout";
@@ -28,6 +29,10 @@ export const routes = [
       {
         path: "/register",
         element: <RegisterPage />,
+      },
+      {
+        path: "/verify-email",
+        element: <VerifyEmailPage />,
       },
     ],
   },

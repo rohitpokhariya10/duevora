@@ -40,7 +40,7 @@ export default function useAuth() {
     try {
       // TODO: Integrate with auth API
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      return { success: true };
+      return { success: true, email };
     } catch (err) {
       setError(err.message || "Signup failed");
       return { success: false, error: err.message };
