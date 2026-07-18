@@ -48,15 +48,15 @@ export default function SignupForm({ onSignup, onGoogleLogin, isLoading, onSwitc
 
       <LoginButton isLoading={isLoading} text="SIGNUP" />
 
-      <Separator text="OR" />
-
-      <GoogleButton onClick={onGoogleLogin} />
-
       <SwitchText
         text="Already have an account?"
         actionText="Login"
         onSwitch={onSwitch}
       />
+
+      <Separator text="OR" />
+
+      <GoogleButton onClick={onGoogleLogin} />
     </form>
   );
 }
