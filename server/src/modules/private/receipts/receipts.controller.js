@@ -48,7 +48,7 @@ class ReceiptsController {
         } finally {
 
             // ending the session
-            session.endSession();
+            await session.endSession();
 
         }
 
