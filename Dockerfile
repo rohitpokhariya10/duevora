@@ -5,7 +5,9 @@ FROM node:20-alpine AS client-builder
 
 WORKDIR /app/client
 
-# Copy package configuration files
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 COPY client/package*.json ./
 
 # Install all dependencies (dev included) for building
