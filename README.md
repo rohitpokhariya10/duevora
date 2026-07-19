@@ -71,7 +71,8 @@ docker run -p 3000:3000 -e MONGO_URI="mongodb+srv://<username>:<password>@cluste
 * **Frontend Container (Dev)**:
   * Port: `5173` (mapped from inside Vite `0.0.0.0:5173`)
   * Command: Runs `watch-package.js npm run dev -- --host`
-  * Proxy: Configured to forward all `/api` requests to backend at `http://server:3000`
+  * Proxy: forwards `/api` to `http://127.0.0.1:3000` during local development.
+    Docker Compose overrides it with `VITE_API_PROXY_TARGET=http://server:3000`.
 
 * **Backend Container (Dev & Prod)**:
   * Port: `3000` (mapped from Express server)
