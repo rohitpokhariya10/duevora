@@ -7,6 +7,7 @@ import router from "./shared/routers/index.router.js";
 import applyMiddlewares from "./shared/middlewares/index.middleware.js";
 import notFoundHandler from "./shared/middlewares/NotFound.middleware.js";
 import errorHandler from "./shared/middlewares/error.middleware.js";
+import webhooksRouter from "./modules/public/webhooks/webhooks.router.js";
 
 const serverDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const publicDirectory = path.join(serverDirectory, "public");
@@ -17,6 +18,9 @@ function createApp() {
 
     // create an express app
     const app = express();
+
+    // Signature verification requires the exact bytes before the global JSON parser runs.
+    app.use("/api/webhooks", webhooksRouter);
 
     // applying middlewares
     applyMiddlewares(app);
