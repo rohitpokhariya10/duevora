@@ -1,4 +1,18 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - duevora-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   server:
     image: node:20-alpine
     container_name: duevora-server-dev
@@ -13,6 +27,7 @@ services:
       - ./server/.env
     environment:
       - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
 
   client:
     image: node:20-alpine
@@ -29,3 +44,6 @@ services:
       - VITE_API_URL=http://server:3000
     depends_on:
       - server
+
+volumes:
+  duevora-redis-data:
