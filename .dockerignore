@@ -5,7 +5,6 @@ client/dist
 server/public
 .git
 .env
-client/.env
 server/.env
 *.md
 docker-compose*.yml
