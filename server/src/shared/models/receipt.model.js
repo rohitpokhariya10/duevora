@@ -50,6 +50,27 @@ const receiptSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Account",
         required: [true, "Account reference is required"],
+    },
+
+    provider: {
+        type: String,
+        enum: ["manual", "razorpay"],
+        default: "manual",
+    },
+
+    providerPaymentId: {
+        type: String,
+        trim: true,
+    },
+
+    providerPaymentLinkId: {
+        type: String,
+        trim: true,
+    },
+
+    providerOrderId: {
+        type: String,
+        trim: true,
     }
 
 }, {
@@ -58,6 +79,8 @@ const receiptSchema = new mongoose.Schema({
 
 // adding index for the receipt schema
 receiptSchema.index({ organizationId: 1, receiptNumber: 1 }, { unique: true });
+receiptSchema.index({ providerPaymentId: 1 }, { unique: true, sparse: true });
+receiptSchema.index({ organizationId: 1, invoiceId: 1, receiptDate: 1 });
 
 // making the model for the receipt schema
 const Receipt = mongoose.model("Receipt", receiptSchema);
