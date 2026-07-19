@@ -5,6 +5,7 @@ import {
     REQUEST_REDIS_CONNECT_TIMEOUT_MS,
     checkRedisHealth,
     getRedisConnectionOptions,
+    usesTls,
 } from "../../config/redis.config.js";
 import {
     COMPLETED_JOB_RETENTION,
@@ -44,6 +45,20 @@ describe("reminder queue factory", () => {
             connectTimeout: REQUEST_REDIS_CONNECT_TIMEOUT_MS,
             commandTimeout: REQUEST_REDIS_COMMAND_TIMEOUT_MS,
         });
+    });
+
+    it("enables explicit TLS for hosted rediss endpoints", () => {
+        expect(usesTls("rediss://default:secret@example.upstash.io:6379")).toBe(true);
+        expect(getRedisConnectionOptions({
+            redisUrl: "rediss://default:secret@example.upstash.io:6379",
+        })).toMatchObject({
+            tls: {},
+            keepAlive: 10000,
+            maxRetriesPerRequest: null,
+        });
+        expect(usesTls("redis://localhost:6379")).toBe(false);
+        expect(getRedisConnectionOptions({ redisUrl: "redis://localhost:6379" }))
+            .not.toHaveProperty("tls");
     });
 
     it("checks Redis through a bounded disposable connection", async () => {

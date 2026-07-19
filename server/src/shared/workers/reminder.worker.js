@@ -1,4 +1,5 @@
 import { UnrecoverableError, Worker } from "bullmq";
+import { setTimeout as delay } from "node:timers/promises";
 import env from "../config/env.config.js";
 import logger from "../config/logger.config.js";
 import { closeRedisConnection, createRedisConnection } from "../config/redis.config.js";
@@ -279,16 +280,33 @@ async function startReminderWorker() {
     }
 }
 
-async function waitForReminderWorkerReady(worker, cleanup = closeReminderWorker) {
-    try {
-        await worker.waitUntilReady();
-        return worker;
-    } catch (error) {
-        // A Worker keeps reconnecting after its readiness promise rejects. Close
-        // it immediately so a Redis startup outage cannot flood API logs.
-        await cleanup(true);
-        throw error;
+async function waitForReminderWorkerReady(worker, cleanup = closeReminderWorker, options = {}) {
+    const attempts = options.attempts ?? env.REMINDER_WORKER_STARTUP_ATTEMPTS;
+    const backoffMs = options.backoffMs ?? env.REMINDER_WORKER_STARTUP_BACKOFF_MS;
+    const wait = options.wait ?? delay;
+    const loggerInstance = options.loggerInstance ?? logger;
+    let lastError;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+            await worker.waitUntilReady();
+            return worker;
+        } catch (error) {
+            lastError = error;
+
+            if (attempt < attempts) {
+                const retryDelay = Math.min(backoffMs * (2 ** (attempt - 1)), 10000);
+                loggerInstance.warn({ attempt, status: "retrying" },
+                    "Reminder worker is waiting for Redis");
+                await wait(retryDelay);
+            }
+        }
     }
+
+    // A Worker keeps reconnecting after readiness fails. Once the bounded
+    // hosted-Redis retry window is exhausted, close it to prevent log flooding.
+    await cleanup(true);
+    throw lastError;
 }
 
 async function closeReminderWorker(force = false) {

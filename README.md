@@ -416,6 +416,8 @@ REMINDER_QUEUE_NAME=payment-reminders
 REMINDER_QUEUE_ENABLED=true
 REMINDER_WORKER_IN_PROCESS=true
 REMINDER_WORKER_CONCURRENCY=5
+REMINDER_WORKER_STARTUP_ATTEMPTS=5
+REMINDER_WORKER_STARTUP_BACKOFF_MS=1000
 REMINDER_JOB_ATTEMPTS=3
 REMINDER_JOB_BACKOFF_MS=60000
 REMINDER_RECOVERY_INTERVAL_MS=60000
@@ -456,6 +458,20 @@ cd server
 npm install
 npm run dev
 ```
+
+For a hosted Upstash database, use the native TLS Redis connection string from
+the Upstash Console's **Connect → Node.js/ioredis** section. BullMQ requires the
+native Redis protocol rather than the REST URL:
+
+```env
+REDIS_URL=rediss://default:<UPSTASH_PASSWORD>@<UPSTASH_ENDPOINT>.upstash.io:6379
+```
+
+Duevora enables TLS automatically for `rediss://` endpoints and gives a hosted
+Worker a bounded exponential startup-retry window before degrading the API.
+Keep `REMINDER_WORKER_STARTUP_ATTEMPTS` and
+`REMINDER_WORKER_STARTUP_BACKOFF_MS` positive. Upstash free-tier command limits
+still apply, and BullMQ performs regular Redis operations even while idle.
 
 For a separate production-style Worker, set `REMINDER_WORKER_IN_PROCESS=false` in `server/.env`, leave the API running, and use another terminal:
 

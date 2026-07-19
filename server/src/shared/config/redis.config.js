@@ -7,12 +7,25 @@ const REQUEST_REDIS_CONNECT_TIMEOUT_MS = 3000;
 const REQUEST_REDIS_COMMAND_TIMEOUT_MS = 3000;
 const REDIS_HEALTH_TIMEOUT_MS = 1000;
 
-function getRedisConnectionOptions({ requestBounded = false } = {}) {
+function usesTls(redisUrl) {
+    return new URL(redisUrl).protocol === "rediss:";
+}
+
+function getRedisConnectionOptions({
+    requestBounded = false,
+    redisUrl = env.REDIS_URL,
+} = {}) {
     const options = {
         maxRetriesPerRequest: null,
         enableReadyCheck: true,
         lazyConnect: true,
+        keepAlive: 10000,
     };
+
+    // Hosted providers such as Upstash require TLS. Although ioredis usually
+    // infers it from rediss://, an explicit TLS object is recommended by the
+    // provider and avoids deployment/runtime differences between platforms.
+    if (usesTls(redisUrl)) options.tls = {};
 
     if (!requestBounded) return options;
 
@@ -30,7 +43,7 @@ function getRedisConnectionOptions({ requestBounded = false } = {}) {
 
 function createRedisConnection(connectionName = "bullmq", options = {}) {
     const connection = new IORedis(env.REDIS_URL, {
-        ...getRedisConnectionOptions(options),
+        ...getRedisConnectionOptions({ ...options, redisUrl: env.REDIS_URL }),
         connectionName,
     });
 
@@ -112,4 +125,5 @@ export {
     checkRedisHealth,
     createRedisConnection,
     getRedisConnectionOptions,
+    usesTls,
 };

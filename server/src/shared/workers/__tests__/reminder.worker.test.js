@@ -211,7 +211,9 @@ describe("reminder worker factory", () => {
         };
         const cleanup = jest.fn().mockResolvedValue();
 
-        await expect(waitForReminderWorkerReady(worker, cleanup)).rejects.toBe(connectionError);
+        await expect(waitForReminderWorkerReady(worker, cleanup, {
+            attempts: 1,
+        })).rejects.toBe(connectionError);
 
         expect(cleanup).toHaveBeenCalledWith(true);
     });
@@ -224,5 +226,28 @@ describe("reminder worker factory", () => {
 
         await expect(waitForReminderWorkerReady(worker, cleanup)).resolves.toBe(worker);
         expect(cleanup).not.toHaveBeenCalled();
+    });
+
+    it("retries a transient hosted Redis readiness failure", async () => {
+        const worker = {
+            waitUntilReady: jest.fn()
+                .mockRejectedValueOnce(new Error("Hosted Redis is waking up"))
+                .mockResolvedValueOnce(),
+        };
+        const cleanup = jest.fn();
+        const wait = jest.fn().mockResolvedValue();
+        const loggerInstance = createLogger();
+
+        await expect(waitForReminderWorkerReady(worker, cleanup, {
+            attempts: 3,
+            backoffMs: 250,
+            wait,
+            loggerInstance,
+        })).resolves.toBe(worker);
+
+        expect(worker.waitUntilReady).toHaveBeenCalledTimes(2);
+        expect(wait).toHaveBeenCalledWith(250);
+        expect(cleanup).not.toHaveBeenCalled();
+        expect(loggerInstance.warn.mock.calls.flat().join(" ")).not.toContain("waking up");
     });
 });

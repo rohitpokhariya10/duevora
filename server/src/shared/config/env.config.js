@@ -57,6 +57,12 @@ const envSchema = z.object({
     REMINDER_QUEUE_ENABLED: booleanValue.default(envConstants.REMINDER_QUEUE_ENABLED),
     REMINDER_WORKER_IN_PROCESS: booleanValue.default(envConstants.REMINDER_WORKER_IN_PROCESS),
     REMINDER_WORKER_CONCURRENCY: positiveInteger.default(envConstants.REMINDER_WORKER_CONCURRENCY),
+    REMINDER_WORKER_STARTUP_ATTEMPTS: positiveInteger.default(
+        envConstants.REMINDER_WORKER_STARTUP_ATTEMPTS
+    ),
+    REMINDER_WORKER_STARTUP_BACKOFF_MS: positiveInteger.default(
+        envConstants.REMINDER_WORKER_STARTUP_BACKOFF_MS
+    ),
     REMINDER_JOB_ATTEMPTS: positiveInteger.default(envConstants.REMINDER_JOB_ATTEMPTS),
     REMINDER_JOB_BACKOFF_MS: positiveInteger.default(envConstants.REMINDER_JOB_BACKOFF_MS),
     REMINDER_RECOVERY_INTERVAL_MS: positiveInteger.default(envConstants.REMINDER_RECOVERY_INTERVAL_MS),
