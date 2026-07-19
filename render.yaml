@@ -46,5 +46,7 @@ services:
         sync: false
       - key: SENDING_USER
         value: "Duevora <noreply@duevora.com>"
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true
