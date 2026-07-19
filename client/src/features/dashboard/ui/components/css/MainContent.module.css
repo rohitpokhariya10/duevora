@@ -4,18 +4,25 @@
 
 .main {
   margin-left: 308px;
-  padding: 100px 32px 32px;
+  padding: 100px 40px 40px;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .overlay {
   display: none;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .main {
+    padding: 100px 32px 32px;
+  }
+}
+
+@media (max-width: 1024px) {
   .main {
     margin-left: 276px;
-    padding: 92px 24px 24px;
+    padding: 88px 24px 24px;
   }
 }
 

@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Avatar,
+  AccessDenied,
 } from "../../../../app/components/common";
 import s from "../css/CustomerList.module.css";
 
@@ -44,13 +45,20 @@ const columns = [
 
 export default function CustomerListPage() {
   const navigate = useNavigate();
-  const { items, loading, total, page, totalPages, getAll, remove, setPage, setPageSize, pageSize } =
+  const { items, loading, total, page, totalPages, getAll, remove, setPage, setPageSize, pageSize, error } =
     useCustomers();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [permissionError, setPermissionError] = useState(false);
 
   useEffect(() => {
-    getAll({ page, limit: pageSize, search });
+    const load = async () => {
+      const result = await getAll({ page, limit: pageSize, search });
+      if (result?.payload?.status === 403) {
+        setPermissionError(true);
+      }
+    };
+    load();
   }, [page, pageSize]);
 
   const handleSearch = (val) => {
@@ -97,6 +105,10 @@ export default function CustomerListPage() {
       </DropdownMenu>
     ),
   };
+
+  if (permissionError) {
+    return <AccessDenied permission="CUSTOMERS.VIEW" />;
+  }
 
   return (
     <div className={s.page}>

@@ -18,5 +18,12 @@ const controller = new RemindersController();
 */
 router.post("/", authMiddleware, permissionMiddleware("reminders.create"), createReminderValidators, controller.createReminder);
 
+/*
+    @route GET /api/reminders
+    @desc List all reminders
+    @access Private (requires reminders.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("reminders.view"), controller.listReminders);
+
 // exporting the router
 export default router;

@@ -19,6 +19,20 @@ const controller = new RolesController();
 router.post("/", authMiddleware, permissionMiddleware("roles.create"), createRoleValidators, controller.createRole);
 
 /*
+    @route GET /api/roles
+    @desc List all roles for the organization
+    @access Private (requires roles.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("roles.view"), controller.listRoles);
+
+/*
+    @route GET /api/roles/permissions
+    @desc List all system permissions
+    @access Private (requires roles.view permission)
+*/
+router.get("/permissions", authMiddleware, permissionMiddleware("roles.view"), controller.listPermissions);
+
+/*
     @route POST /api/roles/:roleId/permissions
     @desc Bind permissions to a role
     @access Private (requires roles.update permission)

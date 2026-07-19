@@ -1,5 +1,5 @@
-header {
-  height: 68px;
+.header {
+  height: 80px;
   position: fixed;
   z-index: 10;
   top: 0;
@@ -7,8 +7,11 @@ header {
   right: 32px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  gap: 16px;
   background: var(--color-bg);
+  border-bottom: 1px solid transparent;
+  padding-top: 10px;
 }
 
 button {
@@ -31,11 +34,43 @@ a:focus-visible {
   box-shadow: none !important;
 }
 
+.greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.welcomeText {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.welcomeSubText {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .search {
   height: 40px;
-  max-width: 480px;
-  flex: 1;
-  margin: auto;
+  width: 240px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -43,12 +78,14 @@ a:focus-visible {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0 12px;
-  color: var(--color-text-muted);
-  transition: border-color var(--transition-fast);
+  color: #64748b;
+  transition: all var(--transition-fast);
 }
 
-.search:hover {
-  border-color: #d1d5db;
+.search:hover,
+.search:focus-within {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .search input {
@@ -58,59 +95,92 @@ a:focus-visible {
   outline: 0;
   font: inherit;
   background: transparent;
-  font-size: 14px;
-  color: var(--color-text);
+  font-size: 13px;
+  color: var(--color-primary);
 }
 
 .search input::placeholder {
-  color: var(--color-text-muted);
+  color: #94a3b8;
 }
 
 .search kbd {
-  font: 11px var(--font-family);
-  background: var(--color-input-bg);
-  padding: 3px 6px;
+  font: 10px var(--font-family);
+  background: #f1f5f9;
+  padding: 2px 4px;
   border-radius: 4px;
-  color: var(--color-text-muted);
+  color: #64748b;
   border: 1px solid var(--color-border);
+  font-weight: 600;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* Action button variations */
 .actions > button {
-  border: 0;
+  border: 1px solid var(--color-border);
   background: var(--color-card);
-  color: var(--color-text-secondary);
+  color: #475569;
   width: 38px;
   height: 38px;
   border-radius: var(--radius-md);
   display: grid;
   place-items: center;
-  font-size: 19px;
+  font-size: 18px;
   cursor: pointer;
   transition: all var(--transition-fast);
-  border: 1px solid var(--color-border);
+  position: relative;
 }
 
 .actions > button:hover {
-  color: var(--color-text);
-  border-color: #d1d5db;
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.plusBtn {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+}
+
+.plusBtn:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+}
+
+.bellBtn {
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--color-accent);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--color-card);
 }
 
 .profileWrap {
   position: relative;
-  margin-left: 4px;
 }
 
 .profile {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px 4px 4px;
+  gap: 6px;
+  padding: 4px;
   border: 1px solid var(--color-border);
   background: var(--color-card);
   border-radius: var(--radius-md);
@@ -120,34 +190,29 @@ a:focus-visible {
 }
 
 .profile:hover {
-  border-color: #d1d5db;
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 
 .avatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
+  background: #0f172a;
+  color: #ffffff;
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   flex-shrink: 0;
 }
 
-.name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
 .chevron {
-  font-size: 14px;
-  color: var(--color-text-muted);
+  font-size: 13px;
+  color: #64748b;
   transition: transform var(--transition-fast);
   flex-shrink: 0;
+  margin-right: 2px;
 }
 
 .chevronOpen {
@@ -158,49 +223,73 @@ a:focus-visible {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  width: 200px;
+  width: 220px;
   padding: 6px;
   background: var(--color-card);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   animation: fadeDown 0.12s ease;
   z-index: 50;
 }
 
+.userInfo {
+  padding: 8px 10px 4px;
+}
+
+.userEmailName {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.userEmailSub {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #64748b;
+  word-break: break-all;
+}
+
 .drop button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 9px 10px;
+  padding: 8px 10px;
   text-align: left;
   border-radius: var(--radius-sm);
-  font-size: 14px;
-  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .drop button:hover {
-  background: var(--color-input-bg);
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .drop button svg {
-  font-size: 18px;
-  color: var(--color-text-secondary);
+  font-size: 16px;
+  color: #64748b;
+}
+
+.drop button:hover svg {
+  color: #0f172a;
 }
 
 .dropDivider {
   height: 1px;
   background: var(--color-border);
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 .dropLogout {
-  color: #dc2626 !important;
+  color: #ef4444 !important;
 }
 
 .dropLogout:hover {
@@ -208,7 +297,7 @@ a:focus-visible {
 }
 
 .dropLogout svg {
-  color: #dc2626 !important;
+  color: #ef4444 !important;
 }
 
 @keyframes fadeDown {
@@ -223,38 +312,46 @@ a:focus-visible {
 }
 
 @media (max-width: 1100px) {
-  header {
+  .header {
     left: 276px;
     right: 18px;
   }
 }
 
 @media (max-width: 768px) {
-  header {
+  .header {
     left: 14px;
     right: 14px;
+    height: 70px;
     gap: 8px;
   }
+  .greeting {
+    display: none;
+  }
   .menu {
-    display: grid !important;
-    width: 40px !important;
-    min-width: 40px;
-  }
-  .actions > button:not(.menu) {
-    display: none;
-  }
-  .name {
-    display: none;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 38px !important;
+    height: 38px !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--color-card) !important;
+    align-items: center;
   }
   .search {
-    max-width: none;
-    margin: 0;
+    width: auto;
+    flex: 1;
+  }
+  .actions > button:not(.bellBtn) {
+    display: none;
   }
 }
 
 .menu span {
   display: block;
-  width: 18px;
+  width: 16px;
   height: 2px;
   border-radius: 99px;
   background: currentColor;
@@ -271,13 +368,4 @@ a:focus-visible {
 
 .menuOpen span:last-child {
   transform: translateY(-6px) rotate(-45deg);
-}
-
-@media (max-width: 768px) {
-  .menu {
-    display: flex !important;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-  }
 }

@@ -17,6 +17,7 @@ import logoIcon from "../../../../../assets/logo.png";
 import styles from "../css/Sidebar.module.css";
 import SidebarFooter from "./SidebarFooter";
 import SidebarItem from "./SidebarItem";
+import ReceiptEdge from "../../../../auth/ui/components/jsx/ReceiptEdge";
 
 const navigationItems = [
   { icon: HiOutlineHome, label: "Dashboard", to: "/dashboard", end: true },
@@ -36,12 +37,13 @@ const navigationItems = [
 export default function Sidebar({ isOpen, onClose, onLogout }) {
   return (
     <aside className={[styles.sidebar, isOpen && styles.open].filter(Boolean).join(" ")}>
+      <ReceiptEdge position="top" />
       <div className={styles.inner}>
         <a aria-label="Duevora dashboard home" className={styles.brand} href="/dashboard">
           <img alt="Duevora" className={styles.brandLogo} src={logoIcon} />
           <span className={styles.brandText}>
             <span className={styles.brandName}>DUEVORA</span>
-            <span className={styles.brandTag}>SMART FINANCE. SIMPLIFIED.</span>
+            <span className={styles.brandTag}>Smart Finance . Simplified</span>
           </span>
         </a>
         <div className={styles.divider} />
@@ -52,6 +54,7 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
         </nav>
         <SidebarFooter onLogout={onLogout} />
       </div>
+      <ReceiptEdge position="bottom" />
     </aside>
   );
 }

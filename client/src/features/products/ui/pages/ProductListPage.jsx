@@ -4,7 +4,7 @@ import { HiPlus, HiOutlinePencilSquare, HiOutlineTrash } from "react-icons/hi2";
 import useProducts from "../../hooks/useProducts";
 import {
   PageHeader, Button, DataTable, FilterBar, StatusBadge,
-  ConfirmDialog, DropdownMenu, DropdownItem,
+  ConfirmDialog, DropdownMenu, DropdownItem, AccessDenied,
 } from "../../../../app/components/common";
 import s from "../css/ProductList.module.css";
 
@@ -25,8 +25,17 @@ export default function ProductListPage() {
   const { items, loading, total, page, totalPages, getAll, remove, setPage, setPageSize, pageSize } = useProducts();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [permissionError, setPermissionError] = useState(false);
 
-  useEffect(() => { getAll({ page, limit: pageSize, search }); }, [page, pageSize]);
+  useEffect(() => {
+    const load = async () => {
+      const result = await getAll({ page, limit: pageSize, search });
+      if (result?.payload?.status === 403) {
+        setPermissionError(true);
+      }
+    };
+    load();
+  }, [page, pageSize]);
 
   const handleSearch = (val) => { setSearch(val); setPage(1); getAll({ page: 1, limit: pageSize, search: val }); };
   const handleDelete = async () => { if (deleteTarget) { await remove(deleteTarget._id); setDeleteTarget(null); getAll({ page, limit: pageSize, search }); } };
@@ -44,6 +53,10 @@ export default function ProductListPage() {
       </DropdownMenu>
     ),
   };
+
+  if (permissionError) {
+    return <AccessDenied permission="PRODUCTS.VIEW" />;
+  }
 
   return (
     <div className={s.page}>

@@ -2,6 +2,7 @@ import EmployeeDao from "../dao/employee.dao.js";
 import EmployeeRoleDao from "../dao/employeeRole.dao.js";
 import RolePermissionDao from "../dao/rolePermission.dao.js";
 import EmployeePermissionDao from "../dao/employeePermission.dao.js";
+import PermissionDao from "../dao/permission.dao.js";
 
 async function buildTokenPayload(user) {
     const employeeDao = new EmployeeDao();
@@ -37,13 +38,17 @@ async function buildTokenPayload(user) {
 
         const permissionMap = new Map();
         for (const rp of rolePermissions) {
-
             if (rp.permissionId) {
-
                 permissionMap.set(rp.permissionId.code, true);
-
             }
+        }
 
+        if (roles.includes("ADMIN")) {
+            const permissionDao = new PermissionDao();
+            const allPermissions = await permissionDao.find({});
+            for (const p of allPermissions) {
+                permissionMap.set(p.code, true);
+            }
         }
 
         const employeePermissionDao = new EmployeePermissionDao();

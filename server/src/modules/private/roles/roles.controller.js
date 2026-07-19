@@ -125,6 +125,39 @@ class RolesController {
 
         }
 
+    // list roles for the current organization
+    listRoles = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // fetching roles using role dao
+        const roles = await this.roleDao.find({ organizationId });
+
+        // populating active permission bindings for each role
+        const populatedRoles = [];
+
+        for (const role of roles) {
+
+            const rolePermissions = await this.rolePermissionDao.find({ roleId: role._id });
+            populatedRoles.push({
+                ...role.toObject(),
+                permissions: rolePermissions.map((rp) => rp.permissionId?._id || rp.permissionId)
+            });
+
+        }
+
+        return Ok(res, "Roles retrieved successfully", populatedRoles);
+
+    }
+
+    // list all system permissions
+    listPermissions = async (req, res) => {
+
+        // fetching all permissions in the system
+        const permissions = await this.permissionDao.find({});
+
+        return Ok(res, "Permissions retrieved successfully", permissions);
+
     }
 
 }

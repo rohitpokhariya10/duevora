@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Avatar,
+  AccessDenied,
 } from "../../../../app/components/common";
 import s from "../css/VendorList.module.css";
 
@@ -48,9 +49,16 @@ export default function VendorListPage() {
     useVendors();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [permissionError, setPermissionError] = useState(false);
 
   useEffect(() => {
-    getAll({ page, limit: pageSize, search });
+    const load = async () => {
+      const result = await getAll({ page, limit: pageSize, search });
+      if (result?.payload?.status === 403) {
+        setPermissionError(true);
+      }
+    };
+    load();
   }, [page, pageSize]);
 
   const handleSearch = (val) => {
@@ -97,6 +105,10 @@ export default function VendorListPage() {
       </DropdownMenu>
     ),
   };
+
+  if (permissionError) {
+    return <AccessDenied permission="VENDORS.VIEW" />;
+  }
 
   return (
     <div className={s.page}>
