@@ -5,9 +5,9 @@ import logger from "../config/logger.config.js";
 import Account from "../models/account.model.js";
 import PaymentLink from "../models/paymentLink.model.js";
 import Receipt from "../models/receipt.model.js";
-import Reminder from "../models/reminder.model.js";
 import WebhookEvent from "../models/webhookEvent.model.js";
 import customerReceiptService from "./customerReceipt.service.js";
+import { completePaidInvoiceReminders } from "./reminder.service.js";
 import { fromPaise } from "../utils/money.util.js";
 
 const SUPPORTED_EVENTS = new Set([
@@ -21,16 +21,6 @@ const PAYMENT_EVENTS = new Set([
     "payment_link.paid",
     "payment_link.partially_paid",
 ]);
-
-const COMPLETABLE_REMINDER_STATUSES = [
-    "pending",
-    "scheduled",
-    "queued",
-    "processing",
-    "failed",
-    "partially_sent",
-    "action_required",
-];
 
 function payloadHash(rawBody) {
     return crypto.createHash("sha256").update(rawBody).digest("hex");
@@ -283,24 +273,11 @@ class RazorpayWebhookService {
 
                 let completedReminderIds = [];
                 if (invoicePaid) {
-                    const reminders = await Reminder.find({
+                    completedReminderIds = await completePaidInvoiceReminders({
                         organizationId: paymentLink.organizationId,
                         invoiceId: paymentLink.invoiceId,
-                        status: { $in: COMPLETABLE_REMINDER_STATUSES },
-                    }).select("_id").session(session);
-                    completedReminderIds = reminders.map((reminder) => reminder._id.toString());
-
-                    await Reminder.updateMany({
-                        _id: { $in: reminders.map((reminder) => reminder._id) },
-                    }, {
-                        $set: {
-                            status: "completed",
-                            queueStatus: "completed",
-                            completedAt: new Date(),
-                            processingLockUntil: null,
-                            processingBy: null,
-                        },
-                    }, { session });
+                        session,
+                    });
                 }
 
                 webhookEvent.status = "processed";

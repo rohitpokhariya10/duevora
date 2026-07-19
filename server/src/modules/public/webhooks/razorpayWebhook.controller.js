@@ -3,6 +3,7 @@ import Ok from "../../../shared/responses/Ok.response.js";
 import razorpayWebhookService, {
     verifyRazorpaySignature,
 } from "../../../shared/services/razorpayWebhook.service.js";
+import { removeReminderJob } from "../../../shared/services/reminderQueue.service.js";
 
 class RazorpayWebhookController {
 
@@ -38,6 +39,13 @@ class RazorpayWebhookController {
 
         if (result?.invalidPayment) {
             throw new BadRequest("Invalid Razorpay payment data.");
+        }
+
+        // Redis operations run only after the payment/accounting transaction has committed.
+        if (result?.completedReminderIds?.length) {
+            await Promise.allSettled(
+                result.completedReminderIds.map((reminderId) => removeReminderJob(reminderId))
+            );
         }
 
         return Ok(res, "Razorpay webhook received", {

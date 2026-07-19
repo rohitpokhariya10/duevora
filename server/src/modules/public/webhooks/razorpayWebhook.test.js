@@ -12,6 +12,20 @@ jest.unstable_mockModule("../../../shared/utils/sendMail.util.js", () => ({
     default: jest.fn(),
 }));
 
+const mockRemoveReminderJob = jest.fn().mockResolvedValue(true);
+const reminderQueueMock = {
+    enqueueReminder: jest.fn(),
+    enqueueImmediateReminder: jest.fn(),
+    removeReminderJob: mockRemoveReminderJob,
+    getReminderJob: jest.fn(),
+};
+
+jest.unstable_mockModule("../../../shared/services/reminderQueue.service.js", () => ({
+    __esModule: true,
+    ...reminderQueueMock,
+    default: reminderQueueMock,
+}));
+
 const { default: createApp } = await import("../../../app.js");
 const { default: Account } = await import("../../../shared/models/account.model.js");
 const { default: Customer } = await import("../../../shared/models/customer.model.js");
@@ -100,6 +114,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+    jest.clearAllMocks();
+
     for (const collection of Object.values(mongoose.connection.collections)) {
         await collection.deleteMany({});
     }
@@ -204,7 +220,9 @@ describe("Razorpay webhook", () => {
 
         const updated = await Reminder.findById(reminder._id);
         expect(updated.status).toBe("completed");
+        expect(updated.queueStatus).toBe("completed");
         expect(updated.completedAt).toBeInstanceOf(Date);
+        expect(mockRemoveReminderJob).toHaveBeenCalledWith(reminder._id.toString());
     });
 
     it("creates the Razorpay Clearing account only once", async () => {
