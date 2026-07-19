@@ -367,3 +367,254 @@ npm run test:reports
 ```
 
 > **Tip:** `BCRYPT_ROUNDS=1` in `server/.env` makes tests ~60–70% faster. Use `10+` in production.
+
+---
+
+## Payment Reminder and Razorpay Test Flow
+
+This flow creates or reuses a Razorpay Payment Link for an approved customer invoice, schedules durable email/WhatsApp reminders through MongoDB and BullMQ, and records successful customer payments as incoming Receipts. Razorpay's signed webhook is the canonical payment source; the browser callback is only a user-experience redirect and never marks an invoice as paid.
+
+### Environment configuration
+
+Copy the safe example, replace every placeholder locally, and never commit credentials:
+
+```bash
+cp server/.env.example server/.env
+```
+
+The feature-related variables are grouped below. Razorpay credentials are required when `RAZORPAY_ENABLED=true`; SMTP credentials are required when `SEND_MAIL=true`; WhatsApp Cloud credentials are required only when `WHATSAPP_MODE=cloud`.
+
+```env
+# Core API, MongoDB and authentication
+PORT=3000
+NODE_ENV=development
+MONGO_URI=mongodb://localhost:27017/duevora
+ACCESS_TOKEN_SECRET=<LONG_RANDOM_ACCESS_TOKEN_SECRET>
+REFRESH_TOKEN_SECRET=<LONG_RANDOM_REFRESH_TOKEN_SECRET>
+FRONTEND_URL=http://localhost:5173
+APP_BASE_URL=http://localhost:5173
+
+# SMTP email
+SEND_MAIL=true
+SMTP_HOST=<SMTP_HOST>
+SMTP_PORT=587
+SMTP_USER=<SMTP_USERNAME>
+SMTP_PASS=<SMTP_PASSWORD_OR_APP_PASSWORD>
+SENDING_USER=Duevora <noreply@example.com>
+
+# Razorpay Test Mode
+RAZORPAY_ENABLED=true
+RAZORPAY_KEY_ID=<RAZORPAY_TEST_KEY_ID>
+RAZORPAY_KEY_SECRET=<RAZORPAY_TEST_KEY_SECRET>
+RAZORPAY_WEBHOOK_SECRET=<SEPARATE_RANDOM_WEBHOOK_SECRET>
+RAZORPAY_API_BASE_URL=https://api.razorpay.com/v1
+
+# Redis, BullMQ and reminder recovery
+REDIS_URL=redis://localhost:6379
+BULLMQ_PREFIX=duevora
+REMINDER_QUEUE_NAME=payment-reminders
+REMINDER_QUEUE_ENABLED=true
+REMINDER_WORKER_IN_PROCESS=true
+REMINDER_WORKER_CONCURRENCY=5
+REMINDER_JOB_ATTEMPTS=3
+REMINDER_JOB_BACKOFF_MS=60000
+REMINDER_RECOVERY_INTERVAL_MS=60000
+REMINDER_RECOVERY_BATCH_SIZE=25
+
+# WhatsApp: disabled, deeplink or cloud
+WHATSAPP_MODE=deeplink
+WHATSAPP_DEFAULT_COUNTRY_CODE=91
+WHATSAPP_API_VERSION=<META_GRAPH_API_VERSION>
+WHATSAPP_PHONE_NUMBER_ID=<META_PHONE_NUMBER_ID>
+WHATSAPP_ACCESS_TOKEN=<META_ACCESS_TOKEN>
+WHATSAPP_TEMPLATE_NAME=<APPROVED_TEMPLATE_NAME>
+WHATSAPP_TEMPLATE_LANGUAGE=en
+```
+
+For SMTP port `465`, the transport uses implicit TLS. Port `587` uses the provider's STARTTLS flow. Use a provider app password where required; set `SEND_MAIL=false` when email delivery is intentionally disabled.
+
+### Start MongoDB, Redis, the API and Worker
+
+Use MongoDB Atlas by setting its connection string as `MONGO_URI`, or start a local MongoDB container once:
+
+```bash
+docker run --detach --name duevora-mongo \
+  --publish 27017:27017 \
+  --volume duevora-mongo-data:/data/db \
+  mongo:7
+
+# On later runs, start the existing container with:
+docker start duevora-mongo
+```
+
+Start the repository's Redis service, then start the API:
+
+```bash
+docker compose up --detach redis
+
+cd server
+npm install
+npm run dev
+```
+
+For a separate production-style Worker, set `REMINDER_WORKER_IN_PROCESS=false` in `server/.env`, leave the API running, and use another terminal:
+
+```bash
+cd server
+npm run dev:worker   # nodemon during development
+# or
+npm run worker       # node worker.js
+```
+
+For a single-process hackathon demo, set both `REMINDER_QUEUE_ENABLED=true` and `REMINDER_WORKER_IN_PROCESS=true`, then run only `npm run dev`; the API starts the Worker and recovery loop after MongoDB is ready. A separately running Worker must use the same MongoDB, Redis, queue name and BullMQ prefix as the API.
+
+### WhatsApp modes and Cloud template
+
+- `WHATSAPP_MODE=disabled`: WhatsApp is skipped and no Meta request or deeplink is created.
+- `WHATSAPP_MODE=deeplink`: the API returns a URL-encoded `whatsappDeepLink`. The seller must open it and press Send; this mode does not claim automatic delivery.
+- `WHATSAPP_MODE=cloud`: the Worker sends an approved Meta WhatsApp template automatically. Configure the Graph API version, phone-number ID, access token, template name and language.
+
+The approved Cloud template must use body variables in this exact order:
+
+1. Customer name
+2. Organization name
+3. Invoice number
+4. Outstanding amount
+5. Due date
+6. Payment URL
+
+Recommended template text:
+
+> Hello {{1}}, this is a payment reminder from {{2}} for invoice {{3}}. The outstanding amount is {{4}} and the due date is {{5}}. Pay securely using {{6}}.
+
+### Razorpay Test Mode and webhook setup
+
+1. Sign in to the Razorpay Dashboard and switch to **Test Mode**.
+2. Open **Account & Settings → API Keys**, generate a Test key, and set its key ID and key secret as `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
+3. Open **Webhooks**, add `{BACKEND_URL}/api/webhooks/razorpay`, and choose a new random webhook secret. Put that same value in `RAZORPAY_WEBHOOK_SECRET`. The webhook secret is deliberately different from `RAZORPAY_KEY_SECRET`.
+4. Subscribe to `payment_link.paid`, `payment_link.partially_paid`, `payment_link.cancelled`, and `payment_link.expired`.
+5. Save the webhook and complete payments with Razorpay's Test Mode payment methods. Test Mode does not collect or transfer real money.
+
+A deployed webhook URL must use public HTTPS. For local testing, expose port `3000` through a trusted HTTPS tunnel and use the tunnel's `/api/webhooks/razorpay` URL. Do not simulate success in the browser or call the webhook with an unsigned payload: only a correctly signed Razorpay webhook creates the Receipt, posts its journal/ledger entries, updates the invoice, and completes pending reminders.
+
+After webhook processing succeeds, the seller dashboard frontend should refetch `GET /api/dashboard/summary`; it must not treat the browser callback or stale client state as payment truth.
+
+### Exact demo sequence
+
+1. Create a customer with an email address and, for WhatsApp, a valid phone number.
+2. Create an invoice for that customer.
+3. Approve/send the invoice so its status is payable.
+4. Create a reminder; the backend creates or reuses its Razorpay Payment Link and queues the reminder.
+5. Send it immediately with `wait=true` for the demo, or leave it scheduled for the Worker.
+6. Open the returned Razorpay payment URL.
+7. Complete a Razorpay Test Mode payment.
+8. Let Razorpay send the signed webhook to the configured HTTPS endpoint.
+9. Fetch the invoice and verify that its status is `partially_paid` or `paid` and that an incoming Receipt exists.
+10. Fetch the dashboard summary and verify the updated collection/outstanding totals and recent payment.
+
+### Exact curl examples
+
+Set these shell placeholders first. Read `paymentLinkId` from the Payment Link response and `reminder.reminderId` from the Create Reminder response.
+
+```bash
+API_BASE_URL="http://localhost:3000/api"
+BEARER_TOKEN="<JWT_ACCESS_TOKEN>"
+INVOICE_ID="<INVOICE_OBJECT_ID>"
+PAYMENT_LINK_ID="<LOCAL_PAYMENT_LINK_OBJECT_ID>"
+REMINDER_ID="<REMINDER_OBJECT_ID>"
+SCHEDULED_FOR="2026-07-19T15:30:00.000Z"
+```
+
+1. Create or reuse a Payment Link:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --url "${API_BASE_URL}/invoices/${INVOICE_ID}/payment-link" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+2. Get the current Payment Link:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request GET \
+  --url "${API_BASE_URL}/invoices/${INVOICE_ID}/payment-link" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+3. Create a Reminder:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --url "${API_BASE_URL}/reminders" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}" \
+  --header "Content-Type: application/json" \
+  --data "{\"invoiceId\":\"${INVOICE_ID}\",\"scheduledFor\":\"${SCHEDULED_FOR}\",\"channels\":[\"email\",\"whatsapp\"],\"title\":\"Invoice payment reminder\",\"description\":\"Please pay the outstanding invoice balance.\"}"
+```
+
+4. Queue a Reminder for immediate delivery:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --url "${API_BASE_URL}/reminders/${REMINDER_ID}/send" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+5. Send a Reminder synchronously with `wait=true`:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --url "${API_BASE_URL}/reminders/${REMINDER_ID}/send?wait=true" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+Commands 4 and 5 are alternatives for one active reminder; do not run both sequentially against a reminder that has already completed delivery.
+
+6. List Reminders:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request GET \
+  --url "${API_BASE_URL}/reminders?page=1&limit=20&sortBy=scheduledFor&sortOrder=asc" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+7. Get one Reminder:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request GET \
+  --url "${API_BASE_URL}/reminders/${REMINDER_ID}" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+8. Cancel a Reminder:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request PATCH \
+  --url "${API_BASE_URL}/reminders/${REMINDER_ID}/cancel" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+9. Cancel a Payment Link:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --url "${API_BASE_URL}/payment-links/${PAYMENT_LINK_ID}/cancel" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
+
+10. Get the Dashboard Summary:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --request GET \
+  --url "${API_BASE_URL}/dashboard/summary" \
+  --header "Authorization: Bearer ${BEARER_TOKEN}"
+```
