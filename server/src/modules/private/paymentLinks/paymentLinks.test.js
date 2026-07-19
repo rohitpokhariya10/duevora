@@ -6,12 +6,13 @@ import request from "supertest";
 
 const mockCreatePaymentLink = jest.fn();
 const mockCancelPaymentLink = jest.fn();
+const mockFetchPaymentLink = jest.fn();
 
 jest.unstable_mockModule("../../../shared/services/razorpay.service.js", () => ({
     __esModule: true,
     default: {
         createPaymentLink: mockCreatePaymentLink,
-        fetchPaymentLink: jest.fn(),
+        fetchPaymentLink: mockFetchPaymentLink,
         cancelPaymentLink: mockCancelPaymentLink,
     },
 }));
@@ -69,6 +70,7 @@ beforeEach(async () => {
         created_at: 1784428200,
     });
     mockCancelPaymentLink.mockResolvedValue({ status: "cancelled" });
+    mockFetchPaymentLink.mockResolvedValue({ status: "created" });
 
     organization = await Organization.create({ name: "Seller Org", code: "SELLER" });
     otherOrganization = await Organization.create({ name: "Other Org", code: "OTHER" });
@@ -154,6 +156,48 @@ describe("Payment Link API", () => {
         expect(mockCreatePaymentLink).toHaveBeenCalledTimes(1);
     });
 
+    it("gets only a current link whose amount still matches the invoice balance", async () => {
+        const created = await request(app)
+            .post(`/api/invoices/${invoice._id}/payment-link`)
+            .set("Authorization", `Bearer ${token}`);
+        const current = await request(app)
+            .get(`/api/invoices/${invoice._id}/payment-link`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(created.status).toBe(201);
+        expect(current.status).toBe(200);
+        expect(current.body.data.paymentLinkId).toBe(created.body.data.paymentLinkId);
+    });
+
+    it("never returns a stale provider URL after a manual partial receipt", async () => {
+        await request(app)
+            .post(`/api/invoices/${invoice._id}/payment-link`)
+            .set("Authorization", `Bearer ${token}`);
+        const account = await Account.create({
+            organizationId: organization._id,
+            name: "Partial Receipt Bank",
+            code: "PARTIAL_BANK",
+            type: "asset",
+        });
+        await Receipt.create({
+            organizationId: organization._id,
+            customerId: customer._id,
+            invoiceId: invoice._id,
+            receiptNumber: "REC-STALE-LINK",
+            receiptDate: new Date("2026-07-15T00:00:00.000Z"),
+            amount: 180,
+            paymentMethod: "bank",
+            accountId: account._id,
+        });
+
+        const response = await request(app)
+            .get(`/api/invoices/${invoice._id}/payment-link`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).not.toContain("rzp.io");
+    });
+
     it("reserves one active link under concurrent creation", async () => {
         mockCreatePaymentLink.mockImplementation(async () => {
             await new Promise((resolve) => setTimeout(resolve, 100));
@@ -232,5 +276,22 @@ describe("Payment Link API", () => {
         expect(second.status).toBe(200);
         expect(second.body.data.status).toBe("cancelled");
         expect(mockCancelPaymentLink).toHaveBeenCalledTimes(1);
+    });
+
+    it("reconciles a lost cancellation response from provider state", async () => {
+        const created = await request(app)
+            .post(`/api/invoices/${invoice._id}/payment-link`)
+            .set("Authorization", `Bearer ${token}`);
+        mockCancelPaymentLink.mockRejectedValueOnce(new Error("response lost"));
+        mockFetchPaymentLink.mockResolvedValueOnce({ status: "cancelled" });
+
+        const response = await request(app)
+            .post(`/api/payment-links/${created.body.data.paymentLinkId}/cancel`)
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.status).toBe("cancelled");
+        expect(mockFetchPaymentLink).toHaveBeenCalledWith("plink_test_1");
+        expect((await PaymentLink.findById(created.body.data.paymentLinkId)).active).toBe(false);
     });
 });

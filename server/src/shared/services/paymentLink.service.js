@@ -164,15 +164,20 @@ class PaymentLinkService {
     };
 
     getCurrentPaymentLink = async ({ organizationId, invoiceId }) => {
-        const { balance } = await this.loadInvoiceContext({ organizationId, invoiceId });
+        const { invoice, balance } = await this.loadInvoiceContext({ organizationId, invoiceId });
+
+        if (!ALLOWED_INVOICE_STATUSES.includes(invoice.status) || balance.outstandingPaise <= 0) {
+            throw new NotFound("No valid active payment link was found for this invoice.");
+        }
+
         const paymentLink = await PaymentLink.findOne({
             organizationId,
             invoiceId,
             active: true,
         });
 
-        if (!paymentLink) {
-            throw new NotFound("No active payment link was found for this invoice.");
+        if (!this.isReusable(paymentLink, balance.outstandingPaise)) {
+            throw new NotFound("No valid active payment link was found for this invoice.");
         }
 
         return toCleanPaymentLink(paymentLink, balance);
@@ -193,7 +198,7 @@ class PaymentLinkService {
             throw new BadRequest("Only active payment links can be cancelled.");
         }
 
-        await this.provider.cancelPaymentLink(paymentLink.providerPaymentLinkId);
+        const providerStatus = await this.cancelProviderLinkOrReconcile(paymentLink);
 
         // A concurrent paid webhook wins over cancellation and must never be downgraded.
         paymentLink = await PaymentLink.findOneAndUpdate({
@@ -203,7 +208,7 @@ class PaymentLinkService {
             status: { $in: CANCELLABLE_STATUSES },
         }, {
             $set: {
-                status: "cancelled",
+                status: providerStatus,
                 active: false,
                 providerUpdatedAt: new Date(),
                 lastSyncedAt: new Date(),
@@ -214,6 +219,22 @@ class PaymentLinkService {
         }) || await PaymentLink.findOne({ _id: paymentLink._id, organizationId });
 
         return toCleanPaymentLink(paymentLink);
+    };
+
+    reconcileAfterReceipt = async ({ organizationId, invoiceId }) => {
+        const { balance } = await this.loadInvoiceContext({ organizationId, invoiceId });
+        const paymentLink = await PaymentLink.findOne({
+            organizationId,
+            invoiceId,
+            active: true,
+        });
+
+        if (!paymentLink || this.isReusable(paymentLink, balance.outstandingPaise)) {
+            return { retired: false };
+        }
+
+        await this.retireStalePaymentLink(paymentLink);
+        return { retired: true, paymentLinkId: paymentLink._id };
     };
 
     loadInvoiceContext = async ({ organizationId, invoiceId, requirePayable = false }) => {
@@ -264,14 +285,16 @@ class PaymentLinkService {
 
     retireStalePaymentLink = async (paymentLink) => {
         const isExpired = paymentLink.expiresAt && paymentLink.expiresAt.getTime() <= Date.now();
+        let reconciledProviderStatus = null;
 
         if (!isExpired && paymentLink.providerPaymentLinkId && CANCELLABLE_STATUSES.includes(paymentLink.status)) {
-            await this.provider.cancelPaymentLink(paymentLink.providerPaymentLinkId);
+            reconciledProviderStatus = await this.cancelProviderLinkOrReconcile(paymentLink);
         }
 
         const nextStatus = isExpired
             ? "expired"
-            : paymentLink.status === "creating" ? "failed" : "cancelled";
+            : reconciledProviderStatus
+                || (paymentLink.status === "creating" ? "failed" : "cancelled");
         await PaymentLink.updateOne({
             _id: paymentLink._id,
             active: true,
@@ -283,6 +306,27 @@ class PaymentLinkService {
                 providerUpdatedAt: new Date(),
             },
         });
+    };
+
+    cancelProviderLinkOrReconcile = async (paymentLink) => {
+        try {
+            await this.provider.cancelPaymentLink(paymentLink.providerPaymentLinkId);
+            return "cancelled";
+        } catch (cancelError) {
+            let providerState;
+
+            try {
+                providerState = await this.provider.fetchPaymentLink(paymentLink.providerPaymentLinkId);
+            } catch {
+                throw cancelError;
+            }
+
+            if (["cancelled", "expired"].includes(providerState?.status)) {
+                return providerState.status;
+            }
+
+            throw cancelError;
+        }
     };
 
     waitForConcurrentPaymentLink = async ({ organizationId, invoiceId }) => {

@@ -3,6 +3,32 @@ import mongoose from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import request from "supertest";
 
+const mockCancelPaymentLink = jest.fn();
+const mockFetchPaymentLink = jest.fn();
+const mockRemoveReminderJob = jest.fn();
+
+jest.unstable_mockModule("../../../shared/services/razorpay.service.js", () => ({
+    __esModule: true,
+    default: {
+        createPaymentLink: jest.fn(),
+        fetchPaymentLink: mockFetchPaymentLink,
+        cancelPaymentLink: mockCancelPaymentLink,
+    },
+}));
+
+const reminderQueueMock = {
+    enqueueReminder: jest.fn(),
+    enqueueImmediateReminder: jest.fn(),
+    removeReminderJob: mockRemoveReminderJob,
+    getReminderJob: jest.fn(),
+};
+
+jest.unstable_mockModule("../../../shared/services/reminderQueue.service.js", () => ({
+    __esModule: true,
+    ...reminderQueueMock,
+    default: reminderQueueMock,
+}));
+
 // Mock sending mail
 jest.unstable_mockModule("../../../shared/utils/sendMail.util.js", () => ({
     __esModule: true,
@@ -21,6 +47,8 @@ const { default: JournalEntry } = await import("../../../shared/models/journalEn
 const { default: JournalEntryLine } = await import("../../../shared/models/journalEntryLine.model.js");
 const { default: LedgerEntry } = await import("../../../shared/models/ledgerEntry.model.js");
 const { default: Receipt } = await import("../../../shared/models/receipt.model.js");
+const { default: PaymentLink } = await import("../../../shared/models/paymentLink.model.js");
+const { default: Reminder } = await import("../../../shared/models/reminder.model.js");
 const { recordCustomerReceipt } = await import("../../../shared/services/customerReceipt.service.js");
 
 let mongoServer;
@@ -47,6 +75,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+    jest.clearAllMocks();
+    mockCancelPaymentLink.mockResolvedValue({ status: "cancelled" });
+    mockFetchPaymentLink.mockResolvedValue({ status: "created" });
+    mockRemoveReminderJob.mockResolvedValue(true);
+
     const collections = mongoose.connection.collections;
     for (const key in collections) {
         await collections[key].deleteMany({});
@@ -198,6 +231,58 @@ describe("Receipts Management Integration Tests", () => {
             // Verify invoice status is updated to paid
             const dbInvoice = await Invoice.findById(invoice._id);
             expect(dbInvoice.status).toBe("paid");
+        });
+
+        it("retires the stale payment link and completes reminders after a full manual receipt", async () => {
+            const paymentLink = await PaymentLink.create({
+                organizationId: orgId,
+                invoiceId: invoice._id,
+                customerId: customer._id,
+                providerPaymentLinkId: "plink_manual_receipt",
+                referenceId: "DVL-MANUAL-RECEIPT",
+                shortUrl: "https://rzp.io/i/manual-receipt",
+                amountPaise: 110000,
+                amountPaidPaise: 0,
+                amountDuePaise: 110000,
+                status: "created",
+                active: true,
+                expiresAt: new Date("2026-08-30T00:00:00.000Z"),
+            });
+            const reminder = await Reminder.create({
+                organizationId: orgId,
+                customerId: customer._id,
+                invoiceId: invoice._id,
+                paymentLinkId: paymentLink._id,
+                title: "Manual receipt lifecycle",
+                scheduledFor: new Date("2026-08-01T00:00:00.000Z"),
+                channels: ["email"],
+                status: "queued",
+                queueStatus: "queued",
+            });
+
+            const response = await request(app)
+                .post("/api/receipts")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customerId: customer._id,
+                    invoiceId: invoice._id,
+                    receiptNumber: "REC-MANUAL-LIFECYCLE",
+                    receiptDate: "2026-07-17",
+                    amount: 1100,
+                    paymentMethod: "Bank Transfer",
+                    accountId: bankAccount._id,
+                });
+
+            expect(response.status).toBe(201);
+            expect((await Invoice.findById(invoice._id)).status).toBe("paid");
+            const updatedLink = await PaymentLink.findById(paymentLink._id);
+            const updatedReminder = await Reminder.findById(reminder._id);
+            expect(updatedLink.active).toBe(false);
+            expect(updatedLink.status).toBe("cancelled");
+            expect(updatedReminder.status).toBe("completed");
+            expect(updatedReminder.queueStatus).toBe("completed");
+            expect(mockCancelPaymentLink).toHaveBeenCalledWith("plink_manual_receipt");
+            expect(mockRemoveReminderJob).toHaveBeenCalledWith(reminder._id.toString());
         });
 
         it("should isolate invoice receipt totals by organization", async () => {

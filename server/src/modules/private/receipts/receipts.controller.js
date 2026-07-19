@@ -1,6 +1,9 @@
 // Importing modules
 import mongoose from "mongoose";
 import { recordCustomerReceipt } from "../../../shared/services/customerReceipt.service.js";
+import paymentLinkService from "../../../shared/services/paymentLink.service.js";
+import { completePaidInvoiceReminders } from "../../../shared/services/reminder.service.js";
+import logger from "../../../shared/config/logger.config.js";
 
 import Created from "../../../shared/responses/Created.response.js";
 
@@ -16,10 +19,11 @@ class ReceiptsController {
         // starting a mongodb transaction session
         const session = await mongoose.startSession();
         session.startTransaction();
+        let receiptResult;
 
         try {
 
-            const { receipt } = await recordCustomerReceipt({
+            receiptResult = await recordCustomerReceipt({
                 organizationId,
                 customerId,
                 invoiceId,
@@ -35,9 +39,6 @@ class ReceiptsController {
             // committing transaction
             await session.commitTransaction();
 
-            // returning the created receipt
-            return Created(res, "Receipt recorded successfully", receipt);
-
         } catch (error) {
 
             // aborting transaction on failure
@@ -50,6 +51,36 @@ class ReceiptsController {
             session.endSession();
 
         }
+
+        const postCommitOperations = [];
+
+        if (invoiceId) {
+            postCommitOperations.push(
+                paymentLinkService.reconcileAfterReceipt({ organizationId, invoiceId })
+            );
+
+            if (receiptResult.invoice?.status === "paid") {
+                postCommitOperations.push(
+                    completePaidInvoiceReminders({ organizationId, invoiceId })
+                );
+            }
+        }
+
+        // Payment-link cancellation and Redis cleanup must run only after the
+        // receipt/accounting transaction has committed.
+        const lifecycleResults = await Promise.allSettled(postCommitOperations);
+        lifecycleResults.forEach((result, index) => {
+            if (result.status === "rejected") {
+                logger.warn({
+                    operation: index === 0 ? "reconcile_payment_link" : "complete_paid_reminders",
+                    invoiceId: invoiceId?.toString(),
+                    errorName: result.reason?.name,
+                }, "Post-receipt payment lifecycle operation failed");
+            }
+        });
+
+        // returning the created receipt
+        return Created(res, "Receipt recorded successfully", receiptResult.receipt);
 
     }
 
