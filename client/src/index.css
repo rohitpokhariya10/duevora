@@ -1,3 +1,8 @@
+@import "tailwindcss";
+
+*{
+  scrollbar-width: none;
+}
 *,
 *::before,
 *::after {
@@ -37,26 +42,62 @@ body {
   padding: 0;
   background-color: var(--color-bg);
 }
-html {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(15, 23, 42, 0.28) transparent;
+
+@font-face {
+  font-family: "helveticaNeue";
+  src: url("/duevora/fonts/63bf3e1c32ea7b11e01bdf94_HelveticaNeue-Light.otf")
+    format("opentype");
+  font-display: swap;
 }
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+
+@font-face {
+  font-family: "bodoniseventytwo";
+  src: url("/duevora/fonts/63bf3e1c32ea7b80ef1bdf9f_bodoni-seventytwo-itc-book-italic.ttf")
+    format("truetype");
+  font-display: swap;
 }
-*::-webkit-scrollbar-track {
-  background: transparent;
+
+@font-face {
+  font-family: "humaneMedium";
+  src: url("/duevora/fonts/63bf3e1c32ea7bb19e1bdfad_Humane-Medium.otf")
+    format("opentype");
+  font-display: swap;
 }
-*::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.2);
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
+
+.duevora-page {
+  overflow-x: hidden;
+  background-color: #000000;
 }
-*::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-accent);
+
+.bg-heroColor {
+  background-color: #5546ff;
 }
-*::-webkit-scrollbar-corner {
-  background: transparent;
+
+.bg-greenColor {
+  background-color: #b3eb16;
+}
+
+.bg-eventBgColor {
+  background-color: #1c1c1c;
+}
+
+.font-helveticaNeue {
+  font-family: "helveticaNeue", sans-serif;
+}
+
+.font-bodoniseventytwo {
+  font-family: "bodoniseventytwo", serif;
+}
+
+.font-humaneMedium {
+  font-family: "humaneMedium", sans-serif;
+}
+
+@keyframes loading {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(420%);
+  }
 }

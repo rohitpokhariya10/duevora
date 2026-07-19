@@ -1,4 +1,3 @@
-﻿import HomePage from "../../features/landing/pages/HomePage";
 import LoginPage from "../../features/auth/pages/LoginPage";
 import RegisterPage from "../../features/auth/pages/RegisterPage";
 import VerifyEmailPage from "../../features/auth/pages/VerifyEmailPage";
@@ -77,6 +76,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 
 import PublicRoute from "../components/routes/PublicRoute";
 import ProtectedRoute from "../components/routes/ProtectedRoute";
+import LandingPage from "../../features/landing/pages/LandingPage";
 import OnboardingRoute from "../components/routes/OnboardingRoute";
 
 export const routes = [
@@ -85,7 +85,7 @@ export const routes = [
     children: [
       {
         path: "/",
-        element: <HomePage />,
+        element: <LandingPage/>,
       },
     ],
   },
