@@ -5,10 +5,6 @@ FROM node:20-alpine AS client-builder
 
 WORKDIR /app/client
 
-# Vite env vars — passed from Render at build time
-ARG VITE_GOOGLE_CLIENT_ID
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
-
 # Copy package configuration files
 COPY client/package*.json ./
 
