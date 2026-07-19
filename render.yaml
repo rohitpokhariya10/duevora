@@ -46,5 +46,8 @@ services:
         sync: false
       - key: SENDING_USER
         value: "Duevora <noreply@duevora.com>"
+      # Frontend VITE vars — available at Docker build time via ARG
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true
