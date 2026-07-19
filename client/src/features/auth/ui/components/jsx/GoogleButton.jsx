@@ -18,11 +18,7 @@ export default function GoogleButton() {
 
   const handleClick = useCallback(() => {
     if (!isConfigured) return;
-    const w = 500;
-    const h = 600;
-    const left = (screen.width - w) / 2;
-    const top = (screen.height - h) / 2;
-    window.open("/api/auth/google", "google-oauth", `width=${w},height=${h},top=${top},left=${left}`);
+    window.location.href = "/api/auth/google";
   }, [isConfigured]);
 
   if (!isConfigured) {

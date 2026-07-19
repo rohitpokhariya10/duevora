@@ -1,0 +1,29 @@
+.machine {
+  position: relative;
+  width: 800px;
+  margin: 0 auto;
+  margin-top: -70px;
+  z-index: 20;
+  overflow: visible;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .machine {
+    width: 560px;
+    margin-top: -50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .machine {
+    width: 400px;
+    margin-top: -35px;
+  }
+}

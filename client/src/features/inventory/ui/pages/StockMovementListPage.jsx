@@ -1,0 +1,4 @@
+﻿import { useQuery } from "@tanstack/react-query";
+import { inventoryApi } from "../../api/inventoryApi";
+import { DataTable, PageHeader } from "../../../../app/components/common";
+export default function StockMovementListPage() { const query=useQuery({queryKey:["stockMovements"],queryFn:()=>inventoryApi.listStockMovements()}); return <div style={{maxWidth:1300,margin:"0 auto"}}><PageHeader title="Stock Movement Audit Trail" subtitle="A read-only history of inventory receipts, issues, transfers, and corrections."/><DataTable loading={query.isLoading} data={query.data?.data||[]} columns={[{key:"date",label:"Date",render:v=>v?new Date(v).toLocaleString():"—"},{key:"product",label:"Product",render:v=>v?.name||"—"},{key:"warehouse",label:"Warehouse",render:v=>v?.name||"—"},{key:"type",label:"Movement"},{key:"quantity",label:"Quantity"},{key:"reference",label:"Reference"}]}/></div>; }

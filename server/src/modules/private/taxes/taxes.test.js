@@ -47,6 +47,12 @@ beforeEach(async () => {
         module: "taxes"
     });
 
+    await Permission.create({
+        name: "View Taxes",
+        code: "TAXES.VIEW",
+        module: "taxes"
+    });
+
     // Create Admin User
     const adminUser = await User.create({
         name: "Admin User",
@@ -189,6 +195,34 @@ describe("Taxes Management Integration Tests", () => {
                     rate: 5,
                     code: "UNPM"
                 });
+
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("GET /api/taxes", () => {
+        it("should successfully retrieve all taxes for organization", async () => {
+            await Tax.create({
+                name: "GST 18%",
+                rate: 18,
+                code: "GST18",
+                organizationId: orgId
+            });
+
+            const res = await request(app)
+                .get("/api/taxes")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.data[0].code).toBe("GST18");
+        });
+
+        it("should return forbidden if user does not have TAXES.VIEW permission", async () => {
+            const res = await request(app)
+                .get("/api/taxes")
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
 
             expect(res.status).toBe(403);
         });

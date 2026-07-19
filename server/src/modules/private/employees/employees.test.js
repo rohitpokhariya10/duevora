@@ -112,6 +112,27 @@ describe("Employee Member Invitation & Creation Integration Tests", () => {
             expect(dbToken.organizationId.toString()).toBe(orgId.toString());
         });
 
+        it("should successfully generate a generic invitation token when email is not provided", async () => {
+            const res = await request(app)
+                .post("/api/employees/invite")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    roleId: adminRoleId
+                });
+
+            expect(res.status).toBe(201);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.token).toBeDefined();
+            expect(res.body.data.inviteUrl).toContain(res.body.data.token);
+            expect(res.body.data.email).toBeUndefined();
+
+            // Verify token is in database with no email
+            const dbToken = await Token.findOne({ value: res.body.data.token, type: "invitation" });
+            expect(dbToken).toBeDefined();
+            expect(dbToken.email).toBeUndefined();
+            expect(dbToken.roleId.toString()).toBe(adminRoleId.toString());
+        });
+
         it("should fail validation if email is invalid", async () => {
             const res = await request(app)
                 .post("/api/employees/invite")
@@ -178,6 +199,46 @@ describe("Employee Member Invitation & Creation Integration Tests", () => {
 
             // Verify employee profile was created
             const employee = await Employee.findOne({ email: "member@example.com" });
+            expect(employee).toBeDefined();
+            expect(employee.organizationId.toString()).toBe(orgId.toString());
+        });
+
+        it("should successfully sign up a user using a generic invitation token (without associated email)", async () => {
+            // Setup: Create invitation token with no email
+            const tokenVal = "generictoken123";
+            await Token.create({
+                type: "invitation",
+                value: tokenVal,
+                roleId: adminRoleId,
+                organizationId: orgId,
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+            });
+
+            const signupPayload = {
+                name: "Generic Member",
+                email: "generic@example.com",
+                password: "securepassword",
+                confirmPassword: "securepassword",
+                token: tokenVal
+            };
+
+            const res = await request(app)
+                .post("/api/auth/signup")
+                .send(signupPayload);
+
+            expect(res.status).toBe(201);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.employee).toBeDefined();
+            expect(res.body.data.employee.firstName).toBe("Generic");
+            expect(res.body.data.employee.lastName).toBe("Member");
+            expect(res.body.data.accessToken).toBeDefined();
+
+            // Verify token was deleted
+            const dbToken = await Token.findOne({ value: tokenVal });
+            expect(dbToken).toBeNull();
+
+            // Verify employee profile was created
+            const employee = await Employee.findOne({ email: "generic@example.com" });
             expect(employee).toBeDefined();
             expect(employee.organizationId.toString()).toBe(orgId.toString());
         });

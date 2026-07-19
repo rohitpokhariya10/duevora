@@ -34,6 +34,7 @@ beforeEach(async () => {
     }
 
     await Permission.create({ name: "Create Bank Accounts", code: "BANKACCOUNTS.CREATE", module: "bankAccounts" });
+    await Permission.create({ name: "View Bank Accounts", code: "BANKACCOUNTS.VIEW", module: "bankAccounts" });
 
     const adminUser = await User.create({ name: "Admin User", email: "admin@example.com", password: "password123", isVerified: true });
     const loginRes = await request(app).post("/api/auth/login").send({ email: "admin@example.com", password: "password123" });
@@ -84,6 +85,29 @@ describe("Bank Accounts Management Integration Tests", () => {
                 .post("/api/bank-accounts")
                 .set("Authorization", `Bearer ${userWithoutPermToken}`)
                 .send({ bankName: "HDFC Bank", accountNumber: "9999999999", accountId: account._id });
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("GET /api/bank-accounts", () => {
+        it("should successfully retrieve all bank accounts", async () => {
+            await BankAccount.create({ organizationId: orgId, bankName: "HDFC Bank", accountNumber: "1234567890", accountId: account._id });
+
+            const res = await request(app)
+                .get("/api/bank-accounts")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.data[0].bankName).toBe("HDFC Bank");
+        });
+
+        it("should return forbidden without permission", async () => {
+            const res = await request(app)
+                .get("/api/bank-accounts")
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
+
             expect(res.status).toBe(403);
         });
     });

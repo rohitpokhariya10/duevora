@@ -415,6 +415,31 @@ class PurchasesController {
 
     }
 
+    // list all organization purchases (vendor bills)
+    listPurchases = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // fetching purchases
+        const purchases = await this.purchaseDao.find({ organizationId });
+
+        // populating vendor names
+        const populated = [];
+
+        for (const purchase of purchases) {
+
+            const vendor = await this.vendorDao.findOne({ _id: purchase.vendorId });
+            populated.push({
+                ...purchase.toObject(),
+                partyName: vendor ? vendor.name : "Unknown Vendor"
+            });
+
+        }
+
+        return Ok(res, "Purchases retrieved successfully", populated);
+
+    }
+
     // helper to get or create account
     getOrCreateAccount = async (organizationId, name, code, type, session) => {
 

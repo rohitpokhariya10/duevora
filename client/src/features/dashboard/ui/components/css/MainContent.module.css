@@ -1,0 +1,43 @@
+.shell {
+  min-height: 100vh;
+}
+
+.main {
+  margin-left: 308px;
+  padding: 100px 40px 40px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.overlay {
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  .main {
+    padding: 100px 32px 32px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .main {
+    margin-left: 276px;
+    padding: 88px 24px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    margin: 0;
+    padding: 80px 16px 16px;
+  }
+  .overlay {
+    display: block;
+    position: fixed;
+    z-index: 15;
+    inset: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.25);
+    backdrop-filter: blur(2px);
+  }
+}

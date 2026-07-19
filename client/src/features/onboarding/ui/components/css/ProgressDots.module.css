@@ -1,0 +1,62 @@
+.dots {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.totalLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin: 0;
+}
+
+.stepText {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.dotRow {
+  display: flex;
+  gap: 8px;
+}
+
+.dotItem {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d1d5db;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.dotItemActive {
+  background: var(--color-accent);
+  transform: scale(1.2);
+}
+
+.dotItemCompleted {
+  background: var(--color-accent);
+  opacity: 0.5;
+}
+
+.dotItem:hover {
+  transform: scale(1.15);
+}
+
+@media (max-width: 768px) {
+  .dots {
+    align-items: center;
+  }
+
+  .stepText {
+    font-size: 16px;
+  }
+}

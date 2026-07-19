@@ -19,6 +19,13 @@ const controller = new PurchasesController();
 router.post("/", authMiddleware, permissionMiddleware("purchases.create"), createPurchaseValidators, controller.createPurchase);
 
 /*
+    @route GET /api/purchases
+    @desc List all purchases (vendor bills) in the organization
+    @access Private (requires purchases.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("purchases.view"), controller.listPurchases);
+
+/*
     @route POST /api/purchases/:purchaseId/approve
     @desc Approve a recorded purchase (vendor bill)
     @access Private (requires purchases.update permission)

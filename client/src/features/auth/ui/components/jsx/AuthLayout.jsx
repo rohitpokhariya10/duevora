@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import BackgroundGrid from "./BackgroundGrid";
 import BlueprintDecorations from "./BlueprintDecorations";
@@ -11,31 +11,15 @@ import SignupForm from "./SignupForm";
 import FooterSection from "./FooterSection";
 import ReceiptEdge from "./ReceiptEdge";
 import useAuth from "../../../hooks/useAuth";
-import useNotification from "../../../../../app/components/notification/useNotification";
 import styles from "../css/AuthLayout.module.css";
 
 export default function AuthLayout({ initialMode = "login" }) {
   const navigate = useNavigate();
-  const { login, signup, restoreSession } = useAuth();
-  const { success } = useNotification();
+  const { login, signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const switchToLogin = () => navigate("/login");
   const switchToSignup = () => navigate("/register");
-
-  useEffect(() => {
-    const channel = new BroadcastChannel("google-auth");
-    channel.onmessage = async (e) => {
-      if (e.data?.type !== "google-auth-success") return;
-      channel.close();
-      const result = await restoreSession();
-      if (result?.success) {
-        success("Logged in with Google successfully");
-        navigate("/dashboard", { replace: true });
-      }
-    };
-    return () => channel.close();
-  }, [restoreSession, navigate, success]);
 
   const handleLogin = async (data) => {
     setIsLoading(true);

@@ -58,12 +58,14 @@ class EmployeesController {
         // generating secure 32-character invitation token
         const token = crypto.randomBytes(16).toString("hex");
 
-        // deleting any existing invitation token for this email to avoid duplicates
-        await this.tokenDao.deleteTokenByEmail(email, "invitation");
+        if (email) {
+            // deleting any existing invitation token for this email to avoid duplicates
+            await this.tokenDao.deleteTokenByEmail(email.trim().toLowerCase(), "invitation");
+        }
 
         // saving token in the database using token dao
         await this.tokenDao.createToken({
-            email,
+            email: email ? email.trim().toLowerCase() : undefined,
             type: "invitation",
             value: token,
             roleId,
@@ -75,17 +77,19 @@ class EmployeesController {
         const inviteUrl = `http://localhost:3000/signup?token=${token}`;
 
         // sending email notification
-        sendMail(
-            email,
-            "Invitation to join Duevora ERP",
-            `You have been invited to join the ERP Accounting System. Click the link to register (valid for 15 minutes): ${inviteUrl}`
-        );
+        if (email) {
+            sendMail(
+                email.trim().toLowerCase(),
+                "Invitation to join Duevora ERP",
+                `You have been invited to join the ERP Accounting System. Click the link to register (valid for 15 minutes): ${inviteUrl}`
+            );
+        }
 
         // returning the invitation details
         return Created(res, "Invitation link generated successfully", {
             token,
             inviteUrl,
-            email,
+            email: email ? email.trim().toLowerCase() : undefined,
             expiresIn: "15 minutes"
         });
 

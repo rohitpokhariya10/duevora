@@ -100,6 +100,31 @@ class QuotationsController {
 
     }
 
+    // list all organization quotations
+    listQuotations = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // fetching quotations
+        const quotations = await this.quotationDao.find({ organizationId });
+
+        // populating customer names
+        const populated = [];
+
+        for (const q of quotations) {
+
+            const customer = await this.customerDao.findOne({ _id: q.customerId });
+            populated.push({
+                ...q.toObject(),
+                partyName: customer ? customer.name : "Unknown Customer"
+            });
+
+        }
+
+        return Ok(res, "Quotations retrieved successfully", populated);
+
+    }
+
 }
 
 export default QuotationsController;

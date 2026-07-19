@@ -7,8 +7,7 @@ const inviteValidators = [
 
     // validating the email field
     body("email")
-        .notEmpty()
-        .withMessage("Email is required")
+        .optional({ checkFalsy: true })
         .isEmail()
         .withMessage("Email is invalid"),
 

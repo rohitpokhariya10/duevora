@@ -5,6 +5,7 @@ import BankAccountDao from "../../../shared/dao/bankAccount.dao.js";
 import NotFound from "../../../shared/errors/NotFound.error.js";
 
 import Created from "../../../shared/responses/Created.response.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
 // class to handle bank transaction operations
 class BankTransactionsController {
@@ -44,6 +45,19 @@ class BankTransactionsController {
 
         // returning the created transaction
         return Created(res, "Bank transaction recorded successfully", transaction);
+
+    }
+
+    // list all bank transactions
+    listBankTransactions = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // retrieving bank transactions
+        const bankTransactions = await this.bankTransactionDao.find({ organizationId });
+
+        // returning bank transactions
+        return Ok(res, "Bank transactions retrieved successfully", bankTransactions);
 
     }
 

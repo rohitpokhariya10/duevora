@@ -1,0 +1,26 @@
+.viewport {
+  position: relative;
+  width: 340px;
+  margin: 0 auto;
+  overflow: hidden;
+  z-index: 4;
+  /* Height is dynamic, set by JS based on visible content */
+}
+
+.strip {
+  position: relative;
+  width: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 768px) {
+  .viewport {
+    width: 270px;
+  }
+}
+
+@media (max-width: 480px) {
+  .viewport {
+    width: 220px;
+  }
+}

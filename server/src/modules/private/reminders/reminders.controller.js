@@ -2,6 +2,7 @@
 import ReminderDao from "../../../shared/dao/reminder.dao.js";
 
 import Created from "../../../shared/responses/Created.response.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
 // class to handle reminder operations
 class RemindersController {
@@ -32,6 +33,18 @@ class RemindersController {
 
         // returning the created reminder
         return Created(res, "Reminder created successfully", reminder);
+
+    }
+
+    // list reminders for organization
+    listReminders = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // fetching reminders using reminder dao sorted by due date
+        const reminders = await this.reminderDao.find({ organizationId }, { sort: { dueDate: 1 } });
+
+        return Ok(res, "Reminders retrieved successfully", reminders);
 
     }
 

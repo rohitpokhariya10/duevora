@@ -425,6 +425,31 @@ class InvoicesController {
 
     }
 
+    // list all organization invoices
+    listInvoices = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // fetching invoices
+        const invoices = await this.invoiceDao.find({ organizationId });
+
+        // populating customer names
+        const populated = [];
+
+        for (const invoice of invoices) {
+
+            const customer = await this.customerDao.findOne({ _id: invoice.customerId });
+            populated.push({
+                ...invoice.toObject(),
+                partyName: customer ? customer.name : "Unknown Customer"
+            });
+
+        }
+
+        return Ok(res, "Invoices retrieved successfully", populated);
+
+    }
+
     // helper to get or create account
     getOrCreateAccount = async (organizationId, name, code, type, session) => {
 

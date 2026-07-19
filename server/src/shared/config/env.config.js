@@ -26,6 +26,10 @@ const envSchema = z.object({
         if (typeof val === "string") return val.toLowerCase() === "true";
         return val;
     }, z.boolean()).default(envConstants.SEND_MAIL),
+    REDIS_URL: z.string().default(envConstants.REDIS_URL),
+    REDIS_HOST: z.string().default(envConstants.REDIS_HOST),
+    REDIS_PORT: z.coerce.number().default(envConstants.REDIS_PORT),
+    REDIS_PASSWORD: z.string().default(envConstants.REDIS_PASSWORD),
 });
 
 // parsing and validating environment variables

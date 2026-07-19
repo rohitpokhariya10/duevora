@@ -4,6 +4,7 @@ import AccountDao from "../../../shared/dao/account.dao.js";
 import Conflict from "../../../shared/errors/Conflict.error.js";
 
 import Created from "../../../shared/responses/Created.response.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
 // class to handle account operations
 class AccountsController {
@@ -47,6 +48,19 @@ class AccountsController {
 
         // returning the created account
         return Created(res, "Account created successfully", account);
+
+    }
+
+    // list all accounts
+    listAccounts = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // retrieving all accounts for this organization
+        const accounts = await this.accountDao.find({ organizationId }, { sort: { code: 1 } });
+
+        // returning the list of accounts
+        return Ok(res, "Accounts retrieved successfully", accounts);
 
     }
 

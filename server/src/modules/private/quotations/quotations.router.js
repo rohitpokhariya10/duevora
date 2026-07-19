@@ -19,6 +19,13 @@ const controller = new QuotationsController();
 router.post("/", authMiddleware, permissionMiddleware("quotations.create"), createQuotationValidators, controller.createQuotation);
 
 /*
+    @route GET /api/quotations
+    @desc List all quotations in the organization
+    @access Private (requires quotations.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("quotations.view"), controller.listQuotations);
+
+/*
     @route POST /api/quotations/:quotationId/approve
     @desc Approve a quotation
     @access Private (requires quotations.update permission)

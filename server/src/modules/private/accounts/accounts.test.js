@@ -47,6 +47,12 @@ beforeEach(async () => {
         module: "accounts"
     });
 
+    await Permission.create({
+        name: "View Accounts",
+        code: "ACCOUNTS.VIEW",
+        module: "accounts"
+    });
+
     // Create Admin User
     const adminUser = await User.create({
         name: "Admin User",
@@ -190,6 +196,36 @@ describe("Accounts Management Integration Tests", () => {
                     code: "off_exp",
                     type: "expense"
                 });
+
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("GET /api/accounts", () => {
+        it("should successfully retrieve all accounts for organization", async () => {
+            await Account.create({
+                name: "Petty Cash",
+                code: "PETTY_CASH",
+                type: "asset",
+                organizationId: orgId
+            });
+
+            const res = await request(app)
+                .get("/api/accounts")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.length).toBeGreaterThan(0);
+            const pettyCash = res.body.data.find(a => a.code === "PETTY_CASH");
+            expect(pettyCash).toBeDefined();
+            expect(pettyCash.name).toBe("Petty Cash");
+        });
+
+        it("should return forbidden if user does not have ACCOUNTS.VIEW permission", async () => {
+            const res = await request(app)
+                .get("/api/accounts")
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
 
             expect(res.status).toBe(403);
         });

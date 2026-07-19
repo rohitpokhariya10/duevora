@@ -19,6 +19,13 @@ const controller = new InvoicesController();
 router.post("/", authMiddleware, permissionMiddleware("invoices.create"), createInvoiceValidators, controller.createInvoice);
 
 /*
+    @route GET /api/invoices
+    @desc List all invoices in the organization
+    @access Private (requires invoices.view permission)
+*/
+router.get("/", authMiddleware, permissionMiddleware("invoices.view"), controller.listInvoices);
+
+/*
     @route POST /api/invoices/:invoiceId/approve
     @desc Approve a draft invoice
     @access Private (requires invoices.update permission)

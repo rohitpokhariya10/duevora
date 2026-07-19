@@ -1,0 +1,46 @@
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.summaryGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summaryItem:last-child {
+  border-bottom: none;
+}
+
+.summaryLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.summaryValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-align: right;
+  max-width: 55%;
+  word-break: break-word;
+}
+
+.summaryValueEmpty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: 400;
+}

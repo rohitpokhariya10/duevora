@@ -17,6 +17,7 @@ const controller = new TaxesController();
     @access Private (requires taxes.create permission)
 */
 router.post("/", authMiddleware, permissionMiddleware("taxes.create"), createTaxValidators, controller.createTax);
+router.get("/", authMiddleware, permissionMiddleware("taxes.view"), controller.listTaxes);
 
 // exporting the router
 export default router;

@@ -6,6 +6,7 @@ import Conflict from "../../../shared/errors/Conflict.error.js";
 import NotFound from "../../../shared/errors/NotFound.error.js";
 
 import Created from "../../../shared/responses/Created.response.js";
+import Ok from "../../../shared/responses/Ok.response.js";
 
 // class to handle bank account operations
 class BankAccountsController {
@@ -56,6 +57,19 @@ class BankAccountsController {
 
         // returning the created bank account
         return Created(res, "Bank account created successfully", bankAccount);
+
+    }
+
+    // list all bank accounts
+    listBankAccounts = async (req, res) => {
+
+        const organizationId = req.user.organizationId;
+
+        // retrieving bank accounts
+        const bankAccounts = await this.bankAccountDao.find({ organizationId });
+
+        // returning bank accounts
+        return Ok(res, "Bank accounts retrieved successfully", bankAccounts);
 
     }
 

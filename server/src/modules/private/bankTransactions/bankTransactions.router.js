@@ -17,6 +17,7 @@ const controller = new BankTransactionsController();
     @access Private (requires bankTransactions.create permission)
 */
 router.post("/", authMiddleware, permissionMiddleware("bankTransactions.create"), createBankTransactionValidators, controller.createBankTransaction);
+router.get("/", authMiddleware, permissionMiddleware("bankTransactions.view"), controller.listBankTransactions);
 
 // exporting the router
 export default router;

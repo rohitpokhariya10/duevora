@@ -9,7 +9,7 @@ import { generateAccessToken, generateOTPToken, generateRefreshToken } from "../
 import sendMail from "../../../shared/utils/sendMail.util.js";
 import createSession from "../../../shared/utils/createSession.util.js";
 
-import sanitizeUser from "../../../shared/sanitizers/user.sanitizer.js";
+import buildTokenPayload from "../../../shared/utils/buildTokenPayload.util.js";
 
 import Unauthorized from "../../../shared/errors/Unauthorized.error.js";
 import BadRequest from "../../../shared/errors/BadRequest.error.js";
@@ -54,14 +54,14 @@ class AuthController {
         // updating the user
         const updatedUser = await this.userDao.updateUserById(user._id, { isVerified: true });
 
-        // sanitizing the updated user
-        const sanitizedUser = sanitizeUser(updatedUser);
+        // building the full token payload with employee/org/roles/permissions
+        const tokenPayload = await buildTokenPayload(updatedUser);
 
         // generating the new accesstoken
-        const accessToken = generateAccessToken(sanitizedUser);
+        const accessToken = generateAccessToken(tokenPayload);
 
         // returning the verified user with access token
-        return Ok(res, "Email Verified Successfully", { user: sanitizedUser, accessToken: accessToken });
+        return Ok(res, "Email Verified Successfully", { user: tokenPayload, accessToken: accessToken });
 
     }
 
@@ -115,11 +115,11 @@ class AuthController {
 
         }
 
-        // getting the sanitized user from the session
-        const sanitizedUser = sanitizeUser(sessionInDb.userId);
+        // building the full token payload with employee/org/roles/permissions
+        const tokenPayload = await buildTokenPayload(sessionInDb.userId);
 
-        // generate the new access token using the user id from the session
-        const accessToken = generateAccessToken(sanitizedUser);
+        // generate the new access token using the full payload
+        const accessToken = generateAccessToken(tokenPayload);
 
         // generating a new refresh token using the session id and the user id from the session
         const newRefreshToken = generateRefreshToken({
@@ -161,14 +161,14 @@ class AuthController {
 
         }
 
-        // getting the sanitized user from the session
-        const sanitizedUser = sanitizeUser(sessionInDb.userId);
+        // building the full token payload with employee/org/roles/permissions
+        const tokenPayload = await buildTokenPayload(sessionInDb.userId);
 
-        // generating a new access token using the user id from the session
-        const accessToken = generateAccessToken(sanitizedUser);
+        // generating a new access token using the full payload
+        const accessToken = generateAccessToken(tokenPayload);
 
         // returning the authenticated user with a fresh access token
-        return Ok(res, "User fetched successfully", { user: sanitizedUser, accessToken: accessToken });
+        return Ok(res, "User fetched successfully", { user: tokenPayload, accessToken: accessToken });
 
     }
 

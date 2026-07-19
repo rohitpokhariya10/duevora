@@ -30,6 +30,7 @@ beforeEach(async () => {
         await mongoose.connection.collections[key].deleteMany({});
     }
     await Permission.create({ name: "Create Bank Transactions", code: "BANKTRANSACTIONS.CREATE", module: "bankTransactions" });
+    await Permission.create({ name: "View Bank Transactions", code: "BANKTRANSACTIONS.VIEW", module: "bankTransactions" });
     const adminUser = await User.create({ name: "Admin User", email: "admin@example.com", password: "password123", isVerified: true });
     const loginRes = await request(app).post("/api/auth/login").send({ email: "admin@example.com", password: "password123" });
     const onboardRes = await request(app).post("/api/organization").set("Authorization", `Bearer ${loginRes.body.data.accessToken}`)
@@ -79,6 +80,37 @@ describe("Bank Transactions Management Integration Tests", () => {
                 .post("/api/bank-transactions")
                 .set("Authorization", `Bearer ${userWithoutPermToken}`)
                 .send({ bankAccountId: bankAccount._id, transactionDate: "2026-07-17", amount: 1000, type: "deposit" });
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe("GET /api/bank-transactions", () => {
+        it("should successfully retrieve all bank transactions", async () => {
+            const { default: BankTransaction } = await import("../../../shared/models/bankTransaction.model.js");
+            await BankTransaction.create({
+                organizationId: orgId,
+                bankAccountId: bankAccount._id,
+                transactionDate: new Date("2026-07-17"),
+                amount: 10000,
+                type: "deposit",
+                reference: "REF-001"
+            });
+
+            const res = await request(app)
+                .get("/api/bank-transactions")
+                .set("Authorization", `Bearer ${adminUserToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.data[0].amount).toBe(10000);
+        });
+
+        it("should return forbidden without permission", async () => {
+            const res = await request(app)
+                .get("/api/bank-transactions")
+                .set("Authorization", `Bearer ${userWithoutPermToken}`);
+
             expect(res.status).toBe(403);
         });
     });

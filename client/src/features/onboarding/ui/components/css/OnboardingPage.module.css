@@ -1,0 +1,187 @@
+.page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20px;
+  overflow: hidden;
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  isolation: isolate;
+}
+
+.paperArea {
+  position: relative;
+  width: 480px;
+  z-index: 30;
+  margin-top: -130px;
+  overflow: hidden;
+}
+
+.receiptStrip {
+  position: relative;
+  width: 100%;
+  will-change: transform;
+  padding-top: 8px;
+}
+
+.stripInitial {
+  transform: translateY(-500px);
+}
+
+.stepSection {
+  position: relative;
+  background: #fff;
+  padding: 100px 36px;
+  margin-bottom: 8px;
+}
+
+.stepLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin: 0 0 4px;
+}
+
+.stepNumber {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-accent);
+  margin: 0 0 2px;
+  line-height: 1;
+}
+
+.stepTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0 0 4px;
+}
+
+.stepDesc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0 0 24px;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
+.fieldsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tearLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: -1px 0 3px rgba(0, 0, 0, 0.06), 1px 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.separator {
+  border-top: 2px dashed #d1d5db;
+}
+
+.receiptStrip::before,
+.receiptStrip::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.receiptStrip::before {
+  left: -6px;
+  background: linear-gradient(135deg, var(--color-bg) 33.33%, transparent 33.33%) 0 0, linear-gradient(225deg, var(--color-bg) 33.33%, transparent 33.33%) 0 0;
+  background-size: 6px 10px;
+  background-repeat: repeat-y;
+}
+
+.receiptStrip::after {
+  right: -6px;
+  background: linear-gradient(45deg, var(--color-bg) 33.33%, transparent 33.33%) 0 0, linear-gradient(315deg, var(--color-bg) 33.33%, transparent 33.33%) 0 0;
+  background-size: 6px 10px;
+  background-repeat: repeat-y;
+}
+
+.controlsArea {
+  position: fixed;
+  right: 60px;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+  transform: translateY(-50%);
+  z-index: 20;
+}
+
+@media (max-width: 1024px) {
+  .controlsArea {
+    right: 24px;
+    top: auto;
+    bottom: 20px;
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding-top: 20px;
+    padding-bottom: 140px;
+  }
+
+  .paperArea {
+    width: 360px;
+    margin-top: -80px;
+  }
+
+  .stepSection {
+    padding: 60px 28px;
+  }
+
+  .controlsArea {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding-top: 10px;
+  }
+
+  .paperArea {
+    width: 300px;
+    margin-top: -50px;
+  }
+
+  .stepSection {
+    padding: 48px 20px;
+  }
+
+  .controlsArea {
+    left: 50%;
+    right: auto;
+    bottom: 20px;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+}

@@ -1,4 +1,4 @@
-// Importing modules
+﻿// Importing modules
 import OrganizationDao from "../../../shared/dao/organization.dao.js";
 import EmployeeDao from "../../../shared/dao/employee.dao.js";
 import RoleDao from "../../../shared/dao/role.dao.js";
@@ -7,6 +7,7 @@ import RolePermissionDao from "../../../shared/dao/rolePermission.dao.js";
 import EmployeeRoleDao from "../../../shared/dao/employeeRole.dao.js";
 import UserDao from "../../../shared/dao/user.dao.js";
 import SessionDao from "../../../shared/dao/session.dao.js";
+import AccountDao from "../../../shared/dao/account.dao.js";
 
 import createSession from "../../../shared/utils/createSession.util.js";
 
@@ -46,12 +47,15 @@ class OrganizationController {
         // initializing the session dao
         this.sessionDao = new SessionDao();
 
+        // initializing the account dao
+        this.accountDao = new AccountDao();
+
     }
 
     // onboard a new organization
     onboard = async (req, res) => {
 
-        const { name, code, address, logo, firstName, lastName } = req.body;
+        const { name, code, address, logo, businessType, industry, phone, firstName, lastName } = req.body;
         const userId = req.user._id;
 
         // checking if organization code already exists using the organization dao
@@ -69,8 +73,27 @@ class OrganizationController {
             code: code.toUpperCase(),
             address,
             logo,
+            businessType,
+            industry,
+            phone,
             status: "active"
         });
+
+        // seeding the minimum chart of accounts required by a new organization
+        const defaultAccounts = [
+            { name: "Cash on Hand", code: "CASH", type: "asset" },
+            { name: "Bank Account", code: "BANK", type: "asset" },
+            { name: "Accounts Receivable", code: "ACCOUNTS_RECEIVABLE", type: "asset" },
+            { name: "Accounts Payable", code: "ACCOUNTS_PAYABLE", type: "liability" },
+            { name: "Tax Payable", code: "TAX_PAYABLE", type: "liability" },
+            { name: "Owner Capital", code: "OWNER_CAPITAL", type: "equity" },
+            { name: "Sales Revenue", code: "SALES_REVENUE", type: "revenue" },
+            { name: "Operating Expenses", code: "OPERATING_EXPENSES", type: "expense" }
+        ];
+
+        for (const account of defaultAccounts) {
+            await this.accountDao.create({ organizationId: organization._id, ...account, status: "active" });
+        }
 
         // seeding default roles for the organization
         const rolesToCreate = [

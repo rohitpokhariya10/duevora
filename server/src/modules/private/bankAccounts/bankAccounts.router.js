@@ -17,6 +17,7 @@ const controller = new BankAccountsController();
     @access Private (requires bankAccounts.create permission)
 */
 router.post("/", authMiddleware, permissionMiddleware("bankAccounts.create"), createBankAccountValidators, controller.createBankAccount);
+router.get("/", authMiddleware, permissionMiddleware("bankAccounts.view"), controller.listBankAccounts);
 
 // exporting the router
 export default router;

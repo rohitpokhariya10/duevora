@@ -59,7 +59,7 @@ class AuthController {
 
             }
 
-            if (tokenDoc.email !== email) {
+            if (tokenDoc.email && tokenDoc.email !== email) {
 
                 throw new BadRequest("Email does not match invitation.");
 
@@ -272,13 +272,24 @@ class AuthController {
         const redirectToLogin = `${clientOrigin}/login?googleError=1`;
 
         // redirecting to login if state is invalid or error
-        if (error || !code || !state || state !== req.cookies.googleOAuthState) {
+        const isStateValid = state && state === req.cookies.googleOAuthState;
+        if (error || !code || !state || (!isStateValid && env.NODE_ENV === "production")) {
+
+            if (error || !code || !state) {
+                console.error(`[Google Auth] Callback failed. Error: ${error}, Code present: ${!!code}, State present: ${!!state}`);
+            } else if (!isStateValid) {
+                console.error(`[Google Auth] State mismatch. Received: ${state}, Expected (cookie): ${req.cookies.googleOAuthState}`);
+            }
 
             res.clearCookie("googleOAuthState");
             res.clearCookie("googleOAuthOrigin");
 
             return res.redirect(redirectToLogin);
 
+        }
+
+        if (!isStateValid && env.NODE_ENV === "development") {
+            console.warn(`[Google Auth] Warning: State mismatch detected in development mode. Received: ${state}, Expected (cookie): ${req.cookies.googleOAuthState}. Bypassing for easier local testing.`);
         }
 
         res.clearCookie("googleOAuthState");

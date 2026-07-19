@@ -17,6 +17,7 @@ const controller = new AccountsController();
     @access Private (requires accounts.create permission)
 */
 router.post("/", authMiddleware, permissionMiddleware("accounts.create"), createAccountValidators, controller.createAccount);
+router.get("/", authMiddleware, permissionMiddleware("accounts.view"), controller.listAccounts);
 
 // exporting the router
 export default router;

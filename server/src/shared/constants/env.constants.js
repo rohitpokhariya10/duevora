@@ -14,6 +14,10 @@ const envConstants = {
     GOOGLE_CLIENT_SECRET: "",
     GOOGLE_REDIRECT_URI: "http://localhost:3000/api/auth/google/callback",
     SEND_MAIL: false,
+    REDIS_URL: "",
+    REDIS_HOST: "127.0.0.1",
+    REDIS_PORT: 6379,
+    REDIS_PASSWORD: "",
 };
 
 export default envConstants;

@@ -1,0 +1,166 @@
+.section {
+  position: relative;
+  background: #fff;
+  padding: 32px 36px 28px;
+  border-bottom: 2px dashed #d1d5db;
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.stepLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin: 0 0 4px 0;
+}
+
+.stepNumber {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-accent);
+  margin: 0 0 2px 0;
+  line-height: 1;
+}
+
+.stepTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0 0 4px 0;
+}
+
+.stepDesc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0 0 24px 0;
+  line-height: 1.4;
+}
+
+.formContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionActive {
+  min-height: 360px;
+}
+
+/* Receipt paper texture */
+.section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 28px,
+      rgba(0, 0, 0, 0.015) 28px,
+      rgba(0, 0, 0, 0.015) 29px
+    );
+  pointer-events: none;
+}
+
+/* Torn top edge */
+.tornTop {
+  position: relative;
+}
+
+.tornTop::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    135deg,
+    #fff 33.33%,
+    transparent 33.33%,
+    transparent 66.66%,
+    #fff 66.66%
+  );
+  background-size: 8px 4px;
+}
+
+/* Summary items for review step */
+.summaryGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summaryItem:last-child {
+  border-bottom: none;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.summaryValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-align: right;
+  max-width: 60%;
+  word-break: break-word;
+}
+
+.summaryValueEmpty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 24px 28px 22px;
+  }
+
+  .stepNumber {
+    font-size: 26px;
+  }
+
+  .stepTitle {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: 20px 20px 18px;
+  }
+
+  .stepNumber {
+    font-size: 22px;
+  }
+
+  .stepTitle {
+    font-size: 16px;
+  }
+
+  .stepDesc {
+    font-size: 13px;
+  }
+}

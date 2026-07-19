@@ -29,6 +29,18 @@ const organizationSchema = new mongoose.Schema({
         type: String,
     },
 
+    businessType: {
+        type: String,
+    },
+
+    industry: {
+        type: String,
+    },
+
+    phone: {
+        type: String,
+    },
+
     status: {
         type: String,
         enum: ["active", "inactive"],
