@@ -47,6 +47,7 @@ import settingsRouter from "../../modules/private/settings/settings.router.js";
 import reportsRouter from "../../modules/private/reports/reports.router.js";
 import contactRouter from "../../modules/public/contact/contact.router.js";
 import healthRouter from "./health.router.js";
+import paymentLinksRouter from "../../modules/private/paymentLinks/paymentLinks.router.js";
 
 // making the router
 const router = express.Router();
@@ -99,6 +100,7 @@ router.use("/notifications", notificationsRouter);
 router.use("/audit-logs", auditLogsRouter);
 router.use("/settings", settingsRouter);
 router.use("/reports", reportsRouter);
+router.use("/payment-links", paymentLinksRouter);
 
 // exporting the router
 export default router;
