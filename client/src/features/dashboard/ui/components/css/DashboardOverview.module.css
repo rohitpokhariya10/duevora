@@ -1,24 +1,24 @@
 .page {
-  max-width: 1440px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .section {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .sectionTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-primary);
-  margin: 0 0 14px;
+  margin: 0 0 12px;
 }
 
 .actions {
@@ -31,7 +31,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: 14px 16px;
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -43,55 +43,55 @@
 
 .actionCard:hover {
   border-color: var(--color-accent);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
   transform: translateY(-1px);
 }
 
 .actionIcon {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-md);
   display: grid;
   place-items: center;
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
 .actionLabel {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-primary);
 }
 
 .actionArrow {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
 .twoCol {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
 }
 
 .card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 22px;
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .cardTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-primary);
   margin: 0;
@@ -122,7 +122,6 @@
 .activityList {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .activityItem {
@@ -138,8 +137,8 @@
 }
 
 .activityDot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--color-accent);
   flex-shrink: 0;
@@ -154,7 +153,7 @@
 }
 
 .activityAction {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
@@ -169,14 +168,14 @@
 .moduleList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .moduleItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px;
+  padding: 12px;
   border: none;
   background: none;
   border-radius: var(--radius-md);
@@ -192,13 +191,13 @@
 }
 
 .moduleIcon {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-md);
   background: var(--color-input-bg);
   display: grid;
   place-items: center;
-  font-size: 20px;
+  font-size: 18px;
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
@@ -207,22 +206,22 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .moduleLabel {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-primary);
 }
 
 .moduleCount {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-muted);
 }
 
 .moduleArrow {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
@@ -231,9 +230,11 @@
   .stats {
     grid-template-columns: repeat(2, 1fr);
   }
-
   .actions {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .twoCol {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -241,12 +242,7 @@
   .stats {
     grid-template-columns: 1fr;
   }
-
   .actions {
-    grid-template-columns: 1fr;
-  }
-
-  .twoCol {
     grid-template-columns: 1fr;
   }
 }

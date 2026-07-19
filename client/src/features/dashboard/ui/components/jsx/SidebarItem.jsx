@@ -1,9 +1,10 @@
 import { NavLink } from "react-router";
 import styles from "../css/Sidebar.module.css";
 
-export default function SidebarItem({ icon: Icon, label, to, onNavigate }) {
+export default function SidebarItem({ icon: Icon, label, to, end, onNavigate }) {
   return (
     <NavLink
+      end={end}
       className={({ isActive }) =>
         [styles.navigationItem, isActive && styles.active].filter(Boolean).join(" ")
       }

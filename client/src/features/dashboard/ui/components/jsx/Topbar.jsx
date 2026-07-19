@@ -1,15 +1,39 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
 import {
   HiMagnifyingGlass,
   HiPlus,
   HiOutlineBell,
-  HiOutlineQuestionMarkCircle,
+  HiOutlineUserCircle,
   HiChevronDown,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineCog6Tooth,
 } from "react-icons/hi2";
+import { useAppSelector } from "../../../../../app/store/hooks";
 import s from "../css/Topbar.module.css";
+
 export default function Topbar({ isMenuOpen, onMenuOpen, onLogout }) {
-  const [o, setO] = useState(false);
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const ref = useRef(null);
+  const { user } = useAppSelector((state) => state.auth);
+
+  const initials = (user?.name || "U")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
   return (
     <header>
       <button
@@ -23,33 +47,35 @@ export default function Topbar({ isMenuOpen, onMenuOpen, onLogout }) {
         <span />
         <span />
       </button>
+
       <label className={s.search}>
         <HiMagnifyingGlass />
         <input placeholder="Search anything..." type="search" />
         <kbd>Ctrl K</kbd>
       </label>
+
       <div className={s.actions}>
-        <button className={s.create} aria-label="Quick create" type="button">
-          <HiPlus />
-        </button>
-        <button aria-label="Notifications" type="button">
+        <button aria-label="Notifications" onClick={() => navigate("/dashboard/notifications")} type="button">
           <HiOutlineBell />
         </button>
-        <button aria-label="Help" type="button">
-          <HiOutlineQuestionMarkCircle />
-        </button>
-        <div className={s.profileWrap}>
-          <button className={s.profile} aria-expanded={o} onClick={() => setO(!o)} type="button">
-            <b>AK</b>
-            <span>Arjun Kapoor</span>
-            <HiChevronDown />
+        <div className={s.profileWrap} ref={ref}>
+          <button className={s.profile} aria-expanded={open} onClick={() => setOpen(!open)} type="button">
+            <span className={s.avatar}>{initials}</span>
+            <span className={s.name}>{user?.name || "User"}</span>
+            <HiChevronDown className={[s.chevron, open && s.chevronOpen].filter(Boolean).join(" ")} />
           </button>
-          {o && (
+          {open && (
             <div className={s.drop} role="menu">
-              <button type="button">My Profile</button>
-              <button type="button">Settings</button>
-              <i />
-              <button onClick={onLogout} type="button">
+              <button onClick={() => { setOpen(false); navigate("/dashboard/profile"); }} type="button">
+                <HiOutlineUserCircle />
+                My Profile
+              </button>
+              <button onClick={() => { setOpen(false); navigate("/dashboard/settings"); }} type="button">
+                <HiOutlineCog6Tooth />
+                Settings
+              </button>
+              <div className={s.dropDivider} />
+              <button className={s.dropLogout} onClick={onLogout} type="button">
                 <HiOutlineArrowRightOnRectangle />
                 Logout
               </button>
