@@ -21,6 +21,7 @@ const { default: JournalEntry } = await import("../../../shared/models/journalEn
 const { default: JournalEntryLine } = await import("../../../shared/models/journalEntryLine.model.js");
 const { default: LedgerEntry } = await import("../../../shared/models/ledgerEntry.model.js");
 const { default: Receipt } = await import("../../../shared/models/receipt.model.js");
+const { recordCustomerReceipt } = await import("../../../shared/services/customerReceipt.service.js");
 
 let mongoServer;
 let app;
@@ -197,6 +198,115 @@ describe("Receipts Management Integration Tests", () => {
             // Verify invoice status is updated to paid
             const dbInvoice = await Invoice.findById(invoice._id);
             expect(dbInvoice.status).toBe("paid");
+        });
+
+        it("should isolate invoice receipt totals by organization", async () => {
+            const otherOrganization = await Organization.create({
+                name: "Other Corp",
+                code: "OTHER"
+            });
+            const otherAccount = await Account.create({
+                name: "Other Bank",
+                code: "OTHER_BANK",
+                type: "asset",
+                organizationId: otherOrganization._id
+            });
+
+            // A malformed cross-tenant reference must never affect this organization's balance.
+            await Receipt.create({
+                organizationId: otherOrganization._id,
+                invoiceId: invoice._id,
+                receiptNumber: "OTHER-REC-001",
+                receiptDate: new Date(),
+                amount: 1000,
+                paymentMethod: "Cash",
+                accountId: otherAccount._id
+            });
+
+            const res = await request(app)
+                .post("/api/receipts")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customerId: customer._id,
+                    invoiceId: invoice._id,
+                    receiptNumber: "REC-ORG-SAFE",
+                    receiptDate: "2026-07-17",
+                    amount: 100,
+                    paymentMethod: "Cash",
+                    accountId: bankAccount._id
+                });
+
+            expect(res.status).toBe(201);
+
+            const dbInvoice = await Invoice.findById(invoice._id);
+            expect(dbInvoice.status).toBe("partially_paid");
+        });
+
+        it("should never regress a paid invoice to partially paid", async () => {
+            invoice.status = "paid";
+            await invoice.save();
+
+            const res = await request(app)
+                .post("/api/receipts")
+                .set("Authorization", `Bearer ${adminUserToken}`)
+                .send({
+                    customerId: customer._id,
+                    invoiceId: invoice._id,
+                    receiptNumber: "REC-PAID-TERMINAL",
+                    receiptDate: "2026-07-17",
+                    amount: 100,
+                    paymentMethod: "Cash",
+                    accountId: bankAccount._id
+                });
+
+            expect(res.status).toBe(201);
+
+            const dbInvoice = await Invoice.findById(invoice._id);
+            expect(dbInvoice.status).toBe("paid");
+        });
+
+        it("should make Razorpay provider payments idempotent", async () => {
+            const recordProviderPayment = async () => {
+                const session = await mongoose.startSession();
+                session.startTransaction();
+
+                try {
+                    const result = await recordCustomerReceipt({
+                        organizationId: orgId,
+                        customerId: customer._id,
+                        invoiceId: invoice._id,
+                        receiptDate: "2026-07-17",
+                        amount: 550,
+                        paymentMethod: "razorpay",
+                        accountId: bankAccount._id,
+                        provider: "razorpay",
+                        providerPaymentId: "pay_duevora_001",
+                        providerPaymentLinkId: "plink_duevora_001",
+                        providerOrderId: "order_duevora_001",
+                        session
+                    });
+
+                    await session.commitTransaction();
+                    return result;
+                } catch (error) {
+                    await session.abortTransaction();
+                    throw error;
+                } finally {
+                    await session.endSession();
+                }
+            };
+
+            const firstResult = await recordProviderPayment();
+            const duplicateResult = await recordProviderPayment();
+
+            expect(firstResult.receipt.receiptNumber).toBe("RZP-pay_duevora_001");
+            expect(firstResult.totalPaid).toBe(550);
+            expect(firstResult.outstandingAmount).toBe(550);
+            expect(duplicateResult.receipt._id.toString()).toBe(firstResult.receipt._id.toString());
+            expect(await Receipt.countDocuments({ providerPaymentId: "pay_duevora_001" })).toBe(1);
+            expect(await JournalEntry.countDocuments({ organizationId: orgId })).toBe(1);
+            expect(await JournalEntryLine.countDocuments({})).toBe(2);
+            expect(await LedgerEntry.countDocuments({ organizationId: orgId })).toBe(2);
         });
 
         it("should return conflict if receipt number already exists", async () => {
