@@ -13,7 +13,7 @@ function GoogleIcon() {
 }
 
 export default function GoogleButton() {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const clientId = "802906445044-1flhkascfjm2qmltkkj379ieptd5v5sp.apps.googleusercontent.com";
   const isConfigured = clientId && clientId !== "your-google-client-id-here";
 
   const handleClick = useCallback(() => {

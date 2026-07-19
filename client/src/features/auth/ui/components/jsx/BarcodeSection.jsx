@@ -14,7 +14,7 @@ export default function BarcodeSection() {
           />
         ))}
       </div>
-      <div className={styles.invoiceId}>DUEV 2024 001</div>
+      <div className={styles.invoiceId}>DUEV {new Date().getFullYear()} 001</div>
     </div>
   );
 }
