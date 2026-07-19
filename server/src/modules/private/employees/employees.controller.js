@@ -75,7 +75,7 @@ class EmployeesController {
         const inviteUrl = `http://localhost:3000/signup?token=${token}`;
 
         // sending email notification
-        sendMail(
+        await sendMail(
             email,
             "Invitation to join Duevora ERP",
             `You have been invited to join the ERP Accounting System. Click the link to register (valid for 15 minutes): ${inviteUrl}`

@@ -130,7 +130,7 @@ class AuthController {
                 expiresAt: new Date(Date.now() + OTP_EXPIRY_TIME)
             });
 
-            sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
+            await sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
 
             // returning otp verification response with access token
             return Created(res, "Otp Sent Successfully for verification", { user: sanitizedUser, accessToken: accessToken });
@@ -339,7 +339,7 @@ class AuthController {
         });
 
         // sending the reset password token as a magic link to the email
-        sendMail(email, "Your reset Password Link", `Click the link and reset your password <a href="${env.FRONTEND_URL}/reset-password/${resetToken}">Reset Your Password</a>`);
+        await sendMail(email, "Your reset Password Link", `Click the link and reset your password <a href="${env.FRONTEND_URL}/reset-password/${resetToken}">Reset Your Password</a>`);
 
         // returning success response
         return Ok(res, "Reset password Mail sent Successfully");

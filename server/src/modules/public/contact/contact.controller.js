@@ -12,7 +12,7 @@ class ContactController {
         const { name, email, phone, subject, message } = req.body;
 
         // sending confirmation email to the person who submitted the form
-        sendMail(
+        await sendMail(
             email,
             `We received your message — ${subject}`,
             `
@@ -35,7 +35,7 @@ class ContactController {
         );
 
         // sending notification email to the admin / support inbox
-        sendMail(
+        await sendMail(
             env.SENDING_USER,
             `[Contact Form] ${subject} — from ${name}`,
             `

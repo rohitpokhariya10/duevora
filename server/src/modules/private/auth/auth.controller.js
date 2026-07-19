@@ -88,7 +88,7 @@ class AuthController {
         );
 
         // sending the otp to the user
-        sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
+        await sendMail(user.email, "Verify your email", `Your OTP is ${otp}. It will expire in ${OTP_EXPIRY_TIME / 60000} minutes.`);
 
         // returning the response
         return Ok(res, "Otp Sent SuccessFully");
